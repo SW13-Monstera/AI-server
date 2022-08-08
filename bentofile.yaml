@@ -12,3 +12,4 @@ python:
   packages:
     - torch
     - sentence_transformers
+    - pydantic
