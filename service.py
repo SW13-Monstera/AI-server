@@ -4,7 +4,7 @@ import bentoml
 from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
-from schemas import Keyword, KeywordInferenceData, KeywordInferenceResponse, KeywordResponse, Problem
+from schemas import Keyword, KeywordInferenceRequest, KeywordInferenceResponse, KeywordResponse, Problem
 
 keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
 
@@ -19,7 +19,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         self.model = bentoml.pytorch.load_model(keyword_model)
         self.problem_dict = problem_dict if problem_dict else {}
 
-    def synchronize_keywords(self, input_data: KeywordInferenceData) -> None:
+    def synchronize_keywords(self, input_data: KeywordInferenceRequest) -> None:
         problem_id = input_data.problem_id
         exist_keywords = self.problem_dict[problem_id].keywords
         remain_keywords = []
@@ -37,16 +37,17 @@ class KeywordPredictRunnable(bentoml.Runnable):
             self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
 
     @bentoml.Runnable.method(batchable=False)
-    def is_correct_keyword(self, input_data: KeywordInferenceData) -> KeywordInferenceResponse:
+    def is_correct_keyword(self, input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
         # 키워드 변경 감지도 추가 해야함
-        self.synchronize_keywords(input_data)
-        if input_data.problem_id not in self.problem_dict:
+
+        if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
                 subject=None,
                 keywords=input_data.keywords,
                 embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keywords]),
             )
-
+        else:  # 기존에 있던 문제라면 validation check
+            self.synchronize_keywords(input_data)
         problem = self.problem_dict[input_data.problem_id]
         split_answer = input_data.user_answer.strip().split()
         tokenized_answer = []
@@ -78,9 +79,9 @@ keyword_service = bentoml.Service(name="keyword_service", runners=[keyword_runne
 
 
 @keyword_service.api(
-    input=JSON(pydantic_model=KeywordInferenceData),
+    input=JSON(pydantic_model=KeywordInferenceRequest),
     output=JSON(pydantic_model=KeywordInferenceResponse),
 )
-async def keyword_predict(input_data: KeywordInferenceData) -> None:
+async def keyword_predict(input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
     result = await keyword_runner.is_correct_keyword.async_run(input_data)
     return result

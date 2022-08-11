@@ -8,7 +8,7 @@ from bentoml import Runner, Service
 from bentoml.models import Model
 from bentoml.testing.server import host_bento
 
-from schemas import Keyword, KeywordInferenceData, Problem
+from schemas import Keyword, KeywordInferenceRequest, Problem
 from service import KeywordPredictRunnable
 
 
@@ -44,9 +44,7 @@ def problem_dict(keyword_model, path: str = "user_answer.csv") -> dict:
                 keywords.append(Keyword(id=keyword_id, content=content))
                 keyword_id += 1
 
-            embedded_keywords = pytorch_keyword_model.encode(
-                [keyword.content for keyword in keywords]
-            )
+            embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keywords])
             problem_dict[problem_id] = Problem(
                 subject=data["problem"],
                 keywords=keywords,
@@ -56,17 +54,13 @@ def problem_dict(keyword_model, path: str = "user_answer.csv") -> dict:
 
 
 @pytest.fixture(scope="function")
-def random_keyword_data(
-    problem_dict: dict, path: str = "user_answer.csv"
-) -> KeywordInferenceData:
+def random_keyword_data(problem_dict: dict, path: str = "user_answer.csv") -> KeywordInferenceRequest:
     df = pd.read_csv(path)
     random_idx = random.randint(0, len(df) - 1)
     random_data = df.iloc[random_idx]
     problem_id = random_data["problem_id"]
     keywords = problem_dict[problem_id].keywords
-    return KeywordInferenceData(
-        problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords
-    )
+    return KeywordInferenceRequest(problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords)
 
 
 @pytest.fixture(scope="session")

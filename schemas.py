@@ -9,7 +9,7 @@ class Keyword(BaseModel):
     content: str
 
 
-class KeywordInferenceData(BaseModel):
+class KeywordInferenceRequest(BaseModel):
     problem_id: int
     user_answer: str
     keywords: List[Keyword]
