@@ -8,8 +8,8 @@ from bentoml import Runner, Service
 from bentoml.models import Model
 from bentoml.testing.server import host_bento
 
-from schemas import Keyword, KeywordInferenceRequest, Problem
-from service import KeywordPredictRunnable
+from app.schemas import Keyword, KeywordInferenceRequest, Problem
+from app.service import KeywordPredictRunnable
 
 
 @pytest.fixture(scope="session")
@@ -28,7 +28,7 @@ def keyword_service(keyword_runner) -> Service:
 
 
 @pytest.fixture(scope="session")
-def problem_dict(keyword_model, path: str = "user_answer.csv") -> dict:
+def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dict:
     pytorch_keyword_model = bentoml.pytorch.load_model(keyword_model)
     df = pd.read_csv(path)
     problem_dict = {}
@@ -54,7 +54,7 @@ def problem_dict(keyword_model, path: str = "user_answer.csv") -> dict:
 
 
 @pytest.fixture(scope="function")
-def random_keyword_data(problem_dict: dict, path: str = "user_answer.csv") -> KeywordInferenceRequest:
+def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.csv") -> KeywordInferenceRequest:
     df = pd.read_csv(path)
     random_idx = random.randint(0, len(df) - 1)
     random_data = df.iloc[random_idx]

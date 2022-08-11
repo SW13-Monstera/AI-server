@@ -1,12 +1,12 @@
 import pytest
 from bentoml.testing.utils import async_request
 
-from schemas import Keyword, KeywordInferenceRequest
-from service import KeywordPredictRunnable
+from app.schemas import Keyword, KeywordInferenceRequest
+from app.service import KeywordPredictRunnable
 
 
 @pytest.mark.asyncio
-async def test_keyword_inference(host: str, random_keyword_data: KeywordInferenceRequest) -> None:
+async def test_keyword_inference_api(host: str, random_keyword_data: KeywordInferenceRequest) -> None:
     """
     api response 200 test
     """
@@ -40,6 +40,7 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
     for problem_id in problem_dict:
         for keyword in problem_dict[problem_id].keywords:
             every_keyword_ids.append(keyword.id)
+    problem_id = random_keyword_data.problem_id
     new_keyword = Keyword(id=max(every_keyword_ids) + 1, content="new keyword")
     test_problem_id = random_keyword_data.problem_id
     runnable = KeywordPredictRunnable(problem_dict)
@@ -50,7 +51,9 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
     problem_keyword_id_set = set(keyword.id for keyword in runnable.problem_dict[test_problem_id].keywords)
     assert delete_keyword.id not in problem_keyword_id_set, "삭제되어야 할 키워드가 메모리에서 지워지지 않았습니다."
     assert new_keyword.id in problem_keyword_id_set, "새로 생긴 키워드가 메모리에 저장되지 않았습니다."
-
+    assert runnable.problem_dict[problem_id].embedded_keywords.shape[0] == len(
+        runnable.problem_dict[problem_id].keywords
+    ), "키워드 임베딩이 제대로 저장되지 않았습니다."
     assert random_keyword_data.keywords == runnable.problem_dict[test_problem_id].keywords, "키워드 동기화가 되지 않았습니다."
     assert test_problem_id == result.problem_id, "request와 response의 문제 ID가 같지 않습니다."
 
