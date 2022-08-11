@@ -38,8 +38,6 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
-        # 키워드 변경 감지도 추가 해야함
-
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
                 subject=None,
