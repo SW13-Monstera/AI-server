@@ -13,3 +13,4 @@ python:
     - torch
     - sentence_transformers
     - pandas
+    - pydantic
