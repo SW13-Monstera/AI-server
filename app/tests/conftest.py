@@ -34,7 +34,7 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
     problem_dict = {}
     keyword_id = 0
     # criterion parsing
-    for i, data in df.iterrows():
+    for _, data in df.iterrows():
         problem_id = data["problem_id"]
         if problem_id not in problem_dict:
             keywords = []

@@ -56,14 +56,14 @@ class KeywordPredictRunnable(bentoml.Runnable):
         tokenized_answer_embedding = self.model.encode(tokenized_answer)
         similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
         predicts = []
-        for z, idx in enumerate(similarity_scores.argmax(axis=1)):
-            if self.threshold < similarity_scores[z][idx]:
-                start_idx = input_data.user_answer.find(tokenized_answer[idx])
-                end_idx = start_idx + len(tokenized_answer[idx])
+        for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
+            if self.threshold < similarity_scores[keyword_idx][embedded_keyword_token_idx]:
+                start_idx = input_data.user_answer.find(tokenized_answer[embedded_keyword_token_idx])
+                end_idx = start_idx + len(tokenized_answer[embedded_keyword_token_idx])
                 predicts.append(
                     KeywordResponse(
-                        id=problem.keywords[z].id,
-                        keyword=problem.keywords[z].content,
+                        id=problem.keywords[keyword_idx].id,
+                        keyword=problem.keywords[keyword_idx].content,
                         predict_keyword_position=[start_idx, end_idx],
                         predict_keyword=input_data.user_answer[start_idx:end_idx],
                     )
