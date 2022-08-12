@@ -1,4 +1,4 @@
-service: "service:keyword_service"
+service: "app.service:keyword_service"
 description: "file: ./README.md"
 labels:
   owner: jack
