@@ -16,7 +16,7 @@ jobs:
             - name: install bentoml
               shell: bash
               run: |
-                conda install pytorch
+                pip3 install torch
                 pip3 install bentoml==1.0.2
                 pip3 install pydantic
                 pip3 install scikit-learn
