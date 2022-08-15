@@ -16,6 +16,7 @@ jobs:
 
             - name: install bentoml
               run: |
+                conda activate ai-server
                 pip3 install bentoml==1.0.2
 
             - name: build docker file and setting deploy files
