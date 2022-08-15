@@ -20,8 +20,10 @@ jobs:
                 pip3 install bentoml==1.0.2
                 pip3 install pydantic
                 pip3 install scikit-learn
-                
-
+                pip3 install sentence_transformers
+            - name: save pytorch model
+              run: |
+                 python3 ./app/model.py
             - name: build docker file and setting deploy files
               env:
                 IMAGE_TAG: ${{ github.sha }}
