@@ -1,0 +1,30 @@
+name: Deploy to dev env
+
+on:
+    push:
+        branches:
+            - dev
+jobs:
+    build-docker:
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v2
+              with:
+                  token: ${{ secrets.PRIVATE_TOKEN }}
+                  submodules: true
+
+            - uses: actions/setup-python@v4
+              with:
+                python-version: '3.8.13'
+
+            - name: install requirements
+              run: |
+                pip install -r requirements.txt
+
+            - name: build docker file and setting deploy files
+              env:
+                IMAGE_TAG: ${{ github.sha }}
+              run: |
+                bentoml build
+                bentoml containerize keyword_service:latest -t keyword_service:$IMAGE_TAG
