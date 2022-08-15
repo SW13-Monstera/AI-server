@@ -13,6 +13,7 @@ jobs:
                   auto-update-conda: true
                   python-version: '3.8.13'
                   environment-name: 'environment.yaml'
+                  activate-environment: 'ai-server'
 
             - name: build docker file and setting deploy files
               env:
