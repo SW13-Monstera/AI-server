@@ -13,8 +13,10 @@ jobs:
                   activate-environment: 'ai-server'
                   auto-update-conda: true
                   python-version: '3.8.13'
-                  environment-file: ./environment.yaml
 
+            - name: install bentoml
+              run: |
+                pip3 install bentoml==1.0.2
 
             - name: build docker file and setting deploy files
               env:
