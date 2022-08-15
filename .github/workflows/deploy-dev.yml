@@ -17,6 +17,8 @@ jobs:
               shell: bash
               run: |
                 pip3 install bentoml==1.0.2
+                pip3 install pydnatic==1.9.2
+                pip3 install scikit-learn
 
             - name: build docker file and setting deploy files
               env:
