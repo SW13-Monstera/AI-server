@@ -15,10 +15,11 @@ jobs:
                   python-version: '3.8.13'
 
             - name: install bentoml
+              shell: bash
               run: |
                 conda activate ai-server
                 pip3 install bentoml==1.0.2
-              shell: bash
+
 
             - name: build docker file and setting deploy files
               env:
