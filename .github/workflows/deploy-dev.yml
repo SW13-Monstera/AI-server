@@ -10,10 +10,11 @@ jobs:
 
             - uses: conda-incubator/setup-miniconda@v2
               with:
+                  activate-environment: 'ai-server'
                   auto-update-conda: true
                   python-version: '3.8.13'
                   environment-file: ./environment.yaml
-                  activate-environment: 'ai-server'
+
 
             - name: build docker file and setting deploy files
               env:
