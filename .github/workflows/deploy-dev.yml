@@ -7,9 +7,7 @@ jobs:
         steps:
             - name: checkout
               uses: actions/checkout@v2
-              with:
-                  token: ${{ secrets.PRIVATE_TOKEN }}
-                  submodules: true
+
 
             - uses: actions/setup-python@v4
               with:
