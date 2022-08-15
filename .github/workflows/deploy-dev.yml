@@ -18,8 +18,9 @@ jobs:
               run: |
                 pip3 install torch
                 pip3 install bentoml==1.0.2
-                pip3 install pydantic
-                pip3 install sklearn
+                pip3 install pydantic==1.9.2
+                pip3 install scikit-learn==1.1.2
+                pip3 install sentence_transformers
             - name: save pytorch model
               run: |
                  python3 ./app/model.py
