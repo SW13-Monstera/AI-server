@@ -52,8 +52,8 @@ jobs:
                   IMAGE_TAG: ${{ github.sha }}
                   BUCKET_NAME: cs-broker-bucket
               run: |
-                  zip -r deploy-$IMAGE_TAG.zip ./scripts appspec.yml
-                  aws s3 cp --region ap-northeast-2 --acl private ./ai-deploy/deploy-$IMAGE_TAG.zip s3://$BUCKET_NAME
+                  zip -r ai-deploy-$IMAGE_TAG.zip ./scripts appspec.yml
+                  aws s3 cp --region ap-northeast-2 --acl private ./ai-deploy-$IMAGE_TAG.zip s3://$BUCKET_NAME
             - name: start deploy
               env:
                   IMAGE_TAG: ${{ github.sha }}
@@ -63,4 +63,4 @@ jobs:
                   aws deploy create-deployment --application-name $APP_NAME \
                   --deployment-config-name CodeDeployDefault.OneAtATime \
                   --deployment-group-name $GROUP_NAME \
-                  --s3-location bucket=cs-broker-bucket,bundleType=zip,key=ai-deploy/deploy-$IMAGE_TAG.zip
+                  --s3-location bucket=cs-broker-bucket,bundleType=zip,key=ai-deploy-$IMAGE_TAG.zip
