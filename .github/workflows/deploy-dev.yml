@@ -22,13 +22,6 @@ jobs:
               run: |
                   python3 ./app/model.py
 
-#            - name: build docker file and setting deploy files
-#              env:
-#                  IMAGE_TAG: ${{ github.sha }}
-#              run: |
-#                  bentoml build
-#                  bentoml containerize keyword_service:latest -t keyword_service:$IMAGE_TAG
-
             - name: aws configure
               uses: aws-actions/configure-aws-credentials@v1
               with:
@@ -49,3 +42,25 @@ jobs:
                   bentoml build
                   bentoml containerize keyword_service:latest -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+                  mkdir scripts
+                  touch scripts/deploy.sh
+                  echo "aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $ECR_REGISTRY" >> scripts/deploy.sh
+                  echo "docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> scripts/deploy.sh
+                  echo "docker run -p 8080:3000 -e PROFILE=dev -d --restart always --name csbroker-ai-api $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> scripts/deploy.sh
+            - name: upload to s3
+              env:
+                  IMAGE_TAG: ${{ github.sha }}
+                  BUCKET_NAME: cs-broker-bucket/ai-deploy
+              run: |
+                  zip -r deploy-$IMAGE_TAG.zip ./scripts appspec.yml
+                  aws s3 cp --region ap-northeast-2 --acl private ./deploy-$IMAGE_TAG.zip s3://$BUCKET_NAME
+            - name: start deploy
+              env:
+                  IMAGE_TAG: ${{ github.sha }}
+                  APP_NAME: csbroker-dev-api-ai-codedeploy
+                  GROUP_NAME: csbroker-dev-ai-api
+              run: |
+                  aws deploy create-deployment --application-name $APP_NAME \
+                  --deployment-config-name CodeDeployDefault.OneAtATime \
+                  --deployment-group-name $GROUP_NAME \
+                  --s3-location bucket=cs-broker-bucket,bundleType=zip,key=deploy-$IMAGE_TAG.zip
