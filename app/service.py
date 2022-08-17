@@ -81,5 +81,29 @@ keyword_service = bentoml.Service(name="keyword_service", runners=[keyword_runne
     output=JSON(pydantic_model=KeywordInferenceResponse),
 )
 async def keyword_predict(input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
+    """
+    {
+        "problem_id": 7,
+        "user_answer": "쿠키도 만료시간이 있지만 파일로 저장되기 때문에 브라우저를 종료해도 계속해서 정보가 남아 있을 수 있습니다. 또한 만료기간을 넉넉하게 잡아두면 쿠키삭제를 할 때 까지 유지될 수도 있습니다. 반면에 세션도 만료시간을 정할 수 있지만 브라우저가 종료되면 만료시간에 상관없이 삭제됩니다. 예를 들어, 크롬에서 다른 탭을 사용해도 세션을 공유됩니다. 다른 브라우저를 사용하게 되면 다른 세션을 사용할 수 있습니다.",
+        "keywords": [
+            {
+                "id": 0,
+                "content":"Lifecycle"
+            },
+            {
+                "id": 1,
+                "content":"보안"
+            },
+            {
+                "id": 2,
+                "content":"저장위치"
+            },
+            {
+                "id": 3,
+                "content":"속도"
+            }
+        ]
+    }
+    """  # noqa
     result = await keyword_runner.is_correct_keyword.async_run(input_data)
     return result
