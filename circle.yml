@@ -1,5 +1,0 @@
-test:
-    override:
-        - pytest --cov=./app ./app/tests
-    post:
-        - codecov
