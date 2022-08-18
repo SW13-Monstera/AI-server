@@ -1,8 +1,9 @@
 from typing import List
 
-from bentoml.exceptions import BadInput
 from numpy.typing import NDArray
 from pydantic import BaseModel, validator
+
+from app.exceptions import APIException, APIExceptionErrorCodes, APIExceptionTypes
 
 
 class Keyword(BaseModel):
@@ -13,7 +14,12 @@ class Keyword(BaseModel):
     def validate_content(cls, value: str) -> str:
         value = value.strip()
         if value == "":
-            raise BadInput("Keyword content cannot be empty")
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="Keyword content cannot be empty",
+                data=value,
+            )
         return value
 
 
@@ -26,13 +32,23 @@ class KeywordInferenceRequest(BaseModel):
     def validate_user_answer(cls, value: str) -> str:
         value = value.strip()
         if value == "":
-            raise BadInput("User answer cannot be empty")
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="User answer cannot be empty",
+                data=value,
+            )
         return value
 
     @validator("keywords")
     def validate_keywords(cls, value: List[Keyword]) -> List[Keyword]:
         if not value:
-            raise BadInput("Keywords cannot be empty")
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="Keywords cannot be empty",
+                data=value,
+            )
         return value
 
 
@@ -43,13 +59,23 @@ class Problem(BaseModel):
     @validator("keywords")
     def validate_keywords(cls, value: List[Keyword]) -> List[Keyword]:
         if not value:
-            raise BadInput("Keywords cannot be empty")
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="Keywords cannot be empty",
+                data=value,
+            )
         return value
 
     @validator("embedded_keywords")
     def validate_embedded_keywords(cls, value: NDArray, values: dict) -> NDArray:
         if len(values["keywords"]) != value.shape[0]:
-            raise BadInput("Keywords and embedded_keywords must have the same length")
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="Keywords and embedded_keywords must have the same length",
+                data=value,
+            )
         return value
 
     class Config:

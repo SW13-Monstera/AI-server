@@ -5,6 +5,7 @@ from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.schemas import Keyword, KeywordInferenceRequest, KeywordInferenceResponse, KeywordResponse, Problem
+from app.utils import ServiceAppFactory  # noqa
 
 keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
 
