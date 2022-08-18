@@ -5,6 +5,7 @@ from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.schemas import Keyword, KeywordInferenceRequest, KeywordInferenceResponse, KeywordResponse, Problem
+from app.utils import ServiceAppFactory  # noqa
 
 keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
 
@@ -40,19 +41,21 @@ class KeywordPredictRunnable(bentoml.Runnable):
     def is_correct_keyword(self, input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
-                subject=None,
                 keywords=input_data.keywords,
                 embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keywords]),
             )
         else:  # 기존에 있던 문제라면 validation check
             self.synchronize_keywords(input_data)
+
         problem = self.problem_dict[input_data.problem_id]
         split_answer = input_data.user_answer.strip().split()
         tokenized_answer = []
-        for k in range(len(split_answer) - self.word_concat_size + 1):
-            tokenized_answer.append(" ".join(split_answer[k : k + self.word_concat_size]))
+        for split_answer_start_idx in range(len(split_answer) - self.word_concat_size + 1):
+            split_answer_end_idx = split_answer_start_idx + self.word_concat_size
+            tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
         if len(split_answer) < self.word_concat_size:
             tokenized_answer.append(" ".join(split_answer))
+
         tokenized_answer_embedding = self.model.encode(tokenized_answer)
         similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
         predicts = []

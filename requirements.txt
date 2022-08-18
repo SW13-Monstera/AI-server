@@ -3,3 +3,7 @@ bentoml==1.0.2
 pydantic==1.9.2
 scikit-learn==1.1.2
 sentence_transformers==2.2.2
+pytest==7.1.2
+pytest-asyncio==0.19.0
+pytest-cov==3.0.0
+starlette==0.20.4
