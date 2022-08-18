@@ -25,7 +25,6 @@ def _create_api_endpoint(
 
     async def api_func(request: Request) -> Response:
         # handle_request may raise 4xx or 5xx exception.
-        print("check")
         try:
             input_data = await api.input.from_http_request(request)
             ctx = None
