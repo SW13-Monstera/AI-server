@@ -1,13 +1,19 @@
 from typing import Optional
 
 import bentoml
+from bentoml.exceptions import NotFound
 from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.model import save_model
 from app.schemas import Keyword, KeywordInferenceRequest, KeywordInferenceResponse, KeywordResponse, Problem
 from app.utils import ServiceAppFactory  # noqa
 
-keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
+try:
+    keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
+except NotFound:
+    save_model()
+    keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
 
 
 class KeywordPredictRunnable(bentoml.Runnable):

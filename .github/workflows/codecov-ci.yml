@@ -21,7 +21,6 @@ jobs:
 
         - name: save pytorch model and build bento
           run: |
-              python3 ./app/model.py
               bentoml build
 
         - name: Generate coverage report

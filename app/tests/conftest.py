@@ -1,19 +1,23 @@
 import random
-from typing import Generator
 
 import bentoml
 import pandas as pd
 import pytest
 from bentoml import Runner, Service
 from bentoml.models import Model
-from bentoml.testing.server import host_bento
 
+from app.model import save_model
 from app.schemas import Keyword, KeywordInferenceRequest, Problem
 from app.service import KeywordPredictRunnable
 
 
 @pytest.fixture(scope="session")
-def keyword_model() -> Model:
+def init_save_model() -> None:
+    save_model()
+
+
+@pytest.fixture(scope="session")
+def keyword_model(init_save_model) -> Model:
     return bentoml.pytorch.get("sentence-ko-roberta")
 
 
@@ -61,10 +65,3 @@ def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.
     problem_id = random_data["problem_id"]
     keywords = problem_dict[problem_id].keywords
     return KeywordInferenceRequest(problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords)
-
-
-@pytest.fixture(scope="session")
-def host() -> Generator[str, None, None]:
-
-    with host_bento(bento="keyword_service") as host:
-        yield host

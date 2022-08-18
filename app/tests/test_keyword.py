@@ -1,22 +1,5 @@
-import pytest
-from bentoml.testing.utils import async_request
-
 from app.schemas import Keyword, KeywordInferenceRequest
 from app.service import KeywordPredictRunnable
-
-
-@pytest.mark.asyncio
-async def test_keyword_inference_api(host: str, random_keyword_data: KeywordInferenceRequest) -> None:
-    """
-    api response 200 test
-    """
-    await async_request(
-        method="POST",
-        url=f"http://{host}/keyword_predict",
-        headers={"Content-Type": "application/json"},
-        data=random_keyword_data.json(),
-        assert_status=200,
-    )
 
 
 def test_keyword_predict_runnable(random_keyword_data: KeywordInferenceRequest) -> None:
