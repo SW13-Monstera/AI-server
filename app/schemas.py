@@ -32,23 +32,6 @@ class ContentStandard(GradingStandard):
     type = GradingStandardEnum.CONTENT
 
 
-class KeywordGradingRequest(BaseModel):
-    problem_id: int = Field(title="문제 아이디")
-    user_answer: str = Field(title="유저 답변")
-    keyword_standards: List[KeywordStandard] = Field(title="키워드 채점 기준 리스트")
-
-    @validator("keyword_standards")
-    def validate_grading_standards(cls, value: List[KeywordStandard]) -> List[GradingStandard]:
-        if not value:
-            raise APIException(
-                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
-                error_type=APIExceptionTypes.DATA_VALIDATION,
-                message="keyword standards cannot be empty",
-                data=value,
-            )
-        return value
-
-
 class Problem(BaseModel):
     keyword_standards: List[KeywordStandard]
     embedded_keywords: NDArray
@@ -80,6 +63,26 @@ class Problem(BaseModel):
         arbitrary_types_allowed = True
 
 
+class UserAnswer(BaseModel):
+    problem_id: int = Field(title="문제 아이디")
+    user_answer: str = Field(title="유저 답변")
+
+
+class KeywordGradingRequest(UserAnswer):
+    keyword_standards: List[KeywordStandard] = Field(title="키워드 채점 기준 리스트")
+
+    @validator("keyword_standards")
+    def validate_grading_standards(cls, value: List[KeywordStandard]) -> List[KeywordStandard]:
+        if not value:
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="keyword standards cannot be empty",
+                data=value,
+            )
+        return value
+
+
 class KeywordResponse(BaseModel):
     id: int
     keyword: str
@@ -90,3 +93,22 @@ class KeywordResponse(BaseModel):
 class KeywordGradingResponse(BaseModel):
     problem_id: int
     correct_keywords: List[KeywordResponse]
+
+
+class IntegratedGradingRequest(KeywordGradingRequest):
+    content_standards: List[ContentStandard]
+
+    @validator("content_standards")
+    def validate_grading_standards(cls, value: List[ContentStandard]) -> List[ContentStandard]:
+        if not value:
+            raise APIException(
+                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
+                error_type=APIExceptionTypes.DATA_VALIDATION,
+                message="content standards cannot be empty",
+                data=value,
+            )
+        return value
+
+
+class IntegratedGradingResponse(KeywordGradingResponse):
+    correct_content_ids: List[int]
