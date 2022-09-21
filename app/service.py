@@ -5,8 +5,9 @@ from bentoml.exceptions import NotFound
 from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.enums import GradingStandardEnum
 from app.model import save_model
-from app.schemas import EmbeddedKeywords, Keyword, KeywordGradingRequest, KeywordGradingResponse, KeywordResponse
+from app.schemas import GradingStandard, KeywordGradingRequest, KeywordGradingResponse, KeywordResponse, Problem
 from app.utils import ServiceAppFactory  # noqa
 
 try:
@@ -30,7 +31,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         problem_id = input_data.problem_id
         exist_keywords = self.problem_dict[problem_id].keywords
         remain_keywords = []
-        input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.keywords}
+        input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.grading_standards}
         for exist_keyword in exist_keywords:
             if exist_keyword.id in input_keyword_dict:
                 input_keyword_dict.pop(exist_keyword.id)
@@ -38,7 +39,9 @@ class KeywordPredictRunnable(bentoml.Runnable):
         is_keyword_changed = len(input_keyword_dict) > 0
         if is_keyword_changed:
             for new_keyword_id, new_keyword_content in input_keyword_dict.items():
-                remain_keywords.append(Keyword(id=new_keyword_id, content=new_keyword_content))
+                remain_keywords.append(
+                    GradingStandard(id=new_keyword_id, content=new_keyword_content, type=GradingStandardEnum.KEYWORD)
+                )
             self.problem_dict[problem_id].keywords = remain_keywords
             new_embedded_keywords = self.model.encode([keyword.content for keyword in remain_keywords])
             self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
@@ -46,9 +49,9 @@ class KeywordPredictRunnable(bentoml.Runnable):
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
-            self.problem_dict[input_data.problem_id] = EmbeddedKeywords(
-                keywords=input_data.keywords,
-                embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keywords]),
+            self.problem_dict[input_data.problem_id] = Problem(
+                keywords=input_data.grading_standards,
+                embedded_keywords=self.model.encode([keyword.content for keyword in input_data.grading_standards]),
             )
         else:  # 기존에 있던 문제라면 validation check
             self.synchronize_keywords(input_data)
@@ -92,24 +95,28 @@ keyword_service = bentoml.Service(name="keyword_service", runners=[keyword_runne
 async def keyword_predict(input_data: KeywordGradingRequest) -> KeywordGradingResponse:
     """
     {
-        "problem_id": 7,
-        "user_answer": "쿠키도 만료시간이 있지만 파일로 저장되기 때문에 브라우저를 종료해도 계속해서 정보가 남아 있을 수 있습니다. 또한 만료기간을 넉넉하게 잡아두면 쿠키삭제를 할 때 까지 유지될 수도 있습니다. 반면에 세션도 만료시간을 정할 수 있지만 브라우저가 종료되면 만료시간에 상관없이 삭제됩니다. 예를 들어, 크롬에서 다른 탭을 사용해도 세션을 공유됩니다. 다른 브라우저를 사용하게 되면 다른 세션을 사용할 수 있습니다.",
-        "keywords": [
+    "problem_id": 7,
+    "user_answer": "쿠키도 만료시간이 있지만 파일로 저장되기 때문에 브라우저를 종료해도 계속해서 정보가 남아 있을 수 있습니다. 또한 만료기간을 넉넉하게 잡아두면 쿠키삭제를 할 때 까지 유지될 수도 있습니다. 반면에 세션도 만료시간을 정할 수 있지만 브라우저가 종료되면 만료시간에 상관없이 삭제됩니다. 예를 들어, 크롬에서 다른 탭을 사용해도 세션을 공유됩니다. 다른 브라우저를 사용하게 되면 다른 세션을 사용할 수 있습니다.",
+    "grading_standards": [
             {
                 "id": 0,
-                "content":"Lifecycle"
+                "content":"Lifecycle",
+                "type": "keyword"
             },
             {
                 "id": 1,
-                "content":"보안"
+                "content":"보안",
+                "type": "keyword"
             },
             {
                 "id": 2,
-                "content":"저장위치"
+                "content":"저장위치",
+                "type": "keyword"
             },
             {
                 "id": 3,
-                "content":"속도"
+                "content":"속도",
+                "type": "keyword"
             }
         ]
     }

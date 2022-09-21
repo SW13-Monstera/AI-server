@@ -6,8 +6,9 @@ import pytest
 from bentoml import Runner, Service
 from bentoml.models import Model
 
+from app.enums import GradingStandardEnum
 from app.model import save_model
-from app.schemas import EmbeddedKeywords, Keyword, KeywordGradingRequest
+from app.schemas import GradingStandard, KeywordGradingRequest, Problem
 from app.service import KeywordPredictRunnable
 
 
@@ -45,11 +46,11 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
 
             for criterion in eval(data["keyword_criterion"]):
                 content, _ = map(str.strip, criterion.split("-"))
-                keywords.append(Keyword(id=keyword_id, content=content))
+                keywords.append(GradingStandard(id=keyword_id, content=content, type=GradingStandardEnum.KEYWORD))
                 keyword_id += 1
 
             embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keywords])
-            problem_dict[problem_id] = EmbeddedKeywords(
+            problem_dict[problem_id] = Problem(
                 keywords=keywords,
                 embedded_keywords=embedded_keywords,
             )
@@ -62,5 +63,7 @@ def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.
     random_idx = random.randint(0, len(df) - 1)
     random_data = df.iloc[random_idx]
     problem_id = random_data["problem_id"]
-    keywords = problem_dict[problem_id].keywords
-    return KeywordGradingRequest(problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords)
+    grading_standards = problem_dict[problem_id].keywords
+    return KeywordGradingRequest(
+        problem_id=problem_id, user_answer=random_data.user_answer, grading_standards=grading_standards
+    )

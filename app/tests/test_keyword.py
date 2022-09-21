@@ -1,4 +1,5 @@
-from app.schemas import Keyword, KeywordGradingRequest
+from app.enums import GradingStandardEnum
+from app.schemas import GradingStandard, KeywordGradingRequest
 from app.service import KeywordPredictRunnable
 
 
@@ -11,7 +12,9 @@ def test_keyword_predict_runnable(random_keyword_data: KeywordGradingRequest) ->
     assert runnable.problem_dict == {}, "init problem dict는 빈 dict 상태입니다."
     result = runnable.is_correct_keyword(random_keyword_data)
     assert test_problem_id in runnable.problem_dict, "new problem 정보가 업데이트 되지 않았습니다."
-    assert random_keyword_data.keywords == runnable.problem_dict[test_problem_id].keywords, "키워드 동기화가 되지 않았습니다."
+    assert (
+        random_keyword_data.grading_standards == runnable.problem_dict[test_problem_id].keywords
+    ), "키워드 동기화가 되지 않았습니다."
     assert test_problem_id == result.problem_id, "request와 response의 문제 ID가 같지 않습니다."
 
 
@@ -24,11 +27,13 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
         for keyword in problem_dict[problem_id].keywords:
             every_keyword_ids.append(keyword.id)
     problem_id = random_keyword_data.problem_id
-    new_keyword = Keyword(id=max(every_keyword_ids) + 1, content="new keyword")
+    new_keyword = GradingStandard(
+        id=max(every_keyword_ids) + 1, content="new keyword", type=GradingStandardEnum.KEYWORD
+    )
     test_problem_id = random_keyword_data.problem_id
     runnable = KeywordPredictRunnable(problem_dict)
-    delete_keyword = random_keyword_data.keywords.pop()  # 키워드 하나 삭제
-    random_keyword_data.keywords.append(new_keyword)  # 키워드 하나 추가
+    delete_keyword = random_keyword_data.grading_standards.pop()  # 키워드 하나 삭제
+    random_keyword_data.grading_standards.append(new_keyword)  # 키워드 하나 추가
     result = runnable.is_correct_keyword(random_keyword_data)
 
     problem_keyword_id_set = set(keyword.id for keyword in runnable.problem_dict[test_problem_id].keywords)
@@ -37,7 +42,9 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
     assert runnable.problem_dict[problem_id].embedded_keywords.shape[0] == len(
         runnable.problem_dict[problem_id].keywords
     ), "키워드 임베딩이 제대로 저장되지 않았습니다."
-    assert random_keyword_data.keywords == runnable.problem_dict[test_problem_id].keywords, "키워드 동기화가 되지 않았습니다."
+    assert (
+        random_keyword_data.grading_standards == runnable.problem_dict[test_problem_id].keywords
+    ), "키워드 동기화가 되지 않았습니다."
     assert test_problem_id == result.problem_id, "request와 response의 문제 ID가 같지 않습니다."
 
     problem_keyword_set = set(keyword.id for keyword in runnable.problem_dict[test_problem_id].keywords)
