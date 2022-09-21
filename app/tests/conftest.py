@@ -6,9 +6,8 @@ import pytest
 from bentoml import Runner, Service
 from bentoml.models import Model
 
-from app.enums import GradingStandardEnum
 from app.model import save_model
-from app.schemas import GradingStandard, KeywordGradingRequest, Problem
+from app.schemas import KeywordGradingRequest, KeywordStandard, Problem
 from app.service import KeywordPredictRunnable
 
 
@@ -42,16 +41,16 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
     for _, data in df.iterrows():
         problem_id = data["problem_id"]
         if problem_id not in problem_dict:
-            keywords = []
+            keyword_standards = []
 
             for criterion in eval(data["keyword_criterion"]):
                 content, _ = map(str.strip, criterion.split("-"))
-                keywords.append(GradingStandard(id=keyword_id, content=content, type=GradingStandardEnum.KEYWORD))
+                keyword_standards.append(KeywordStandard(id=keyword_id, content=content))
                 keyword_id += 1
 
-            embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keywords])
+            embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keyword_standards])
             problem_dict[problem_id] = Problem(
-                keywords=keywords,
+                keyword_standards=keyword_standards,
                 embedded_keywords=embedded_keywords,
             )
     return problem_dict
@@ -63,7 +62,7 @@ def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.
     random_idx = random.randint(0, len(df) - 1)
     random_data = df.iloc[random_idx]
     problem_id = random_data["problem_id"]
-    grading_standards = problem_dict[problem_id].keywords
+    keyword_standards = problem_dict[problem_id].keyword_standards
     return KeywordGradingRequest(
-        problem_id=problem_id, user_answer=random_data.user_answer, grading_standards=grading_standards
+        problem_id=problem_id, user_answer=random_data.user_answer, keyword_standards=keyword_standards
     )

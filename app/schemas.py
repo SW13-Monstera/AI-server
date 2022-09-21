@@ -10,7 +10,6 @@ from app.exceptions import APIException, APIExceptionErrorCodes, APIExceptionTyp
 class GradingStandard(BaseModel):
     id: int = Field(title="아이디")
     content: str = Field(title="채점 기준 내용")
-    type: GradingStandardEnum = Field(title="채점 기준 타입")
 
     @validator("content")
     def validate_content(cls, value: str) -> str:
@@ -25,36 +24,37 @@ class GradingStandard(BaseModel):
         return value
 
 
+class KeywordStandard(GradingStandard):
+    type = GradingStandardEnum.KEYWORD
+
+
+class ContentStandard(GradingStandard):
+    type = GradingStandardEnum.CONTENT
+
+
 class KeywordGradingRequest(BaseModel):
     problem_id: int = Field(title="문제 아이디")
     user_answer: str = Field(title="유저 답변")
-    grading_standards: List[GradingStandard] = Field(title="키워드 채점 기준 리스트")
+    keyword_standards: List[KeywordStandard] = Field(title="키워드 채점 기준 리스트")
 
-    @validator("grading_standards")
-    def validate_grading_standards(cls, value: List[GradingStandard]) -> List[GradingStandard]:
+    @validator("keyword_standards")
+    def validate_grading_standards(cls, value: List[KeywordStandard]) -> List[GradingStandard]:
         if not value:
             raise APIException(
                 exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
                 error_type=APIExceptionTypes.DATA_VALIDATION,
-                message="grading standards cannot be empty",
+                message="keyword standards cannot be empty",
                 data=value,
             )
         return value
 
 
-# class IntegratedGradingRequest(BaseModel):
-#     problem_id: int
-#     user_answer: str
-#     keywords: List[GradingStandard]
-#     key_contents:
-
-
 class Problem(BaseModel):
-    keywords: List[GradingStandard]
+    keyword_standards: List[KeywordStandard]
     embedded_keywords: NDArray
 
-    @validator("keywords")
-    def validate_keywords(cls, value: List[GradingStandard]) -> List[GradingStandard]:
+    @validator("keyword_standards")
+    def validate_keywords(cls, value: List[KeywordStandard]) -> List[KeywordStandard]:
         if not value:
             raise APIException(
                 exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
@@ -62,20 +62,12 @@ class Problem(BaseModel):
                 message="Keywords cannot be empty",
                 data=value,
             )
-        for standard in value:
-            if standard.type != GradingStandardEnum.KEYWORD:
-                raise APIException(
-                    exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
-                    error_type=APIExceptionTypes.DATA_VALIDATION,
-                    message="Embedded keywords schema has only keyword standard",
-                    data=value,
-                )
 
         return value
 
     @validator("embedded_keywords")
     def validate_embedded_keywords(cls, value: NDArray, values: dict) -> NDArray:
-        if len(values["keywords"]) != value.shape[0]:
+        if len(values["keyword_standards"]) != value.shape[0]:
             raise APIException(
                 exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
                 error_type=APIExceptionTypes.DATA_VALIDATION,

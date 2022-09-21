@@ -5,9 +5,8 @@ from bentoml.exceptions import NotFound
 from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.enums import GradingStandardEnum
 from app.model import save_model
-from app.schemas import GradingStandard, KeywordGradingRequest, KeywordGradingResponse, KeywordResponse, Problem
+from app.schemas import KeywordGradingRequest, KeywordGradingResponse, KeywordResponse, KeywordStandard, Problem
 from app.utils import ServiceAppFactory  # noqa
 
 try:
@@ -29,9 +28,9 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
         problem_id = input_data.problem_id
-        exist_keywords = self.problem_dict[problem_id].keywords
+        exist_keywords = self.problem_dict[problem_id].keyword_standards
         remain_keywords = []
-        input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.grading_standards}
+        input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.keyword_standards}
         for exist_keyword in exist_keywords:
             if exist_keyword.id in input_keyword_dict:
                 input_keyword_dict.pop(exist_keyword.id)
@@ -39,10 +38,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
         is_keyword_changed = len(input_keyword_dict) > 0
         if is_keyword_changed:
             for new_keyword_id, new_keyword_content in input_keyword_dict.items():
-                remain_keywords.append(
-                    GradingStandard(id=new_keyword_id, content=new_keyword_content, type=GradingStandardEnum.KEYWORD)
-                )
-            self.problem_dict[problem_id].keywords = remain_keywords
+                remain_keywords.append(KeywordStandard(id=new_keyword_id, content=new_keyword_content))
+            self.problem_dict[problem_id].keyword_standards = remain_keywords
             new_embedded_keywords = self.model.encode([keyword.content for keyword in remain_keywords])
             self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
 
@@ -50,8 +47,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
-                keywords=input_data.grading_standards,
-                embedded_keywords=self.model.encode([keyword.content for keyword in input_data.grading_standards]),
+                keyword_standards=input_data.keyword_standards,
+                embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keyword_standards]),
             )
         else:  # 기존에 있던 문제라면 validation check
             self.synchronize_keywords(input_data)
@@ -74,8 +71,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
                 end_idx = start_idx + len(tokenized_answer[embedded_keyword_token_idx])
                 predicts.append(
                     KeywordResponse(
-                        id=problem.keywords[keyword_idx].id,
-                        keyword=problem.keywords[keyword_idx].content,
+                        id=problem.keyword_standards[keyword_idx].id,
+                        keyword=problem.keyword_standards[keyword_idx].content,
                         predict_keyword_position=[start_idx, end_idx],
                         predict_keyword=input_data.user_answer[start_idx:end_idx],
                     )
