@@ -23,22 +23,10 @@ class Keyword(BaseModel):
         return value
 
 
-class KeywordInferenceRequest(BaseModel):
+class KeywordGradingRequest(BaseModel):
     problem_id: int
     user_answer: str
     keywords: List[Keyword]
-
-    @validator("user_answer")
-    def validate_user_answer(cls, value: str) -> str:
-        value = value.strip()
-        if value == "":
-            raise APIException(
-                exception_code=APIExceptionErrorCodes.SCHEMA_ERROR,
-                error_type=APIExceptionTypes.DATA_VALIDATION,
-                message="User answer cannot be empty",
-                data=value,
-            )
-        return value
 
     @validator("keywords")
     def validate_keywords(cls, value: List[Keyword]) -> List[Keyword]:
@@ -52,7 +40,7 @@ class KeywordInferenceRequest(BaseModel):
         return value
 
 
-class Problem(BaseModel):
+class EmbeddedKeywords(BaseModel):
     keywords: List[Keyword]
     embedded_keywords: NDArray
 
@@ -89,6 +77,6 @@ class KeywordResponse(BaseModel):
     predict_keyword: str
 
 
-class KeywordInferenceResponse(BaseModel):
+class KeywordGradingResponse(BaseModel):
     problem_id: int
     correct_keywords: List[KeywordResponse]

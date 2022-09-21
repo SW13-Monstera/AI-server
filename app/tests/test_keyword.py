@@ -1,8 +1,8 @@
-from app.schemas import Keyword, KeywordInferenceRequest
+from app.schemas import Keyword, KeywordGradingRequest
 from app.service import KeywordPredictRunnable
 
 
-def test_keyword_predict_runnable(random_keyword_data: KeywordInferenceRequest) -> None:
+def test_keyword_predict_runnable(random_keyword_data: KeywordGradingRequest) -> None:
     """
     로컬 메모리에 problem 정보가 없을 때 새롭게 problem에 대한 키워드 정보를 생성하고 예측한다.
     """
@@ -15,7 +15,7 @@ def test_keyword_predict_runnable(random_keyword_data: KeywordInferenceRequest) 
     assert test_problem_id == result.problem_id, "request와 response의 문제 ID가 같지 않습니다."
 
 
-def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: KeywordInferenceRequest) -> None:
+def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: KeywordGradingRequest) -> None:
     """
     기존에 있던 키워드가 하나 지워지고 새로 생겼을 때 메모리에서도 지우고 새로 생긴 키워드를 임베딩해서 저장한다.
     """

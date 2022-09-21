@@ -6,7 +6,7 @@ from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.model import save_model
-from app.schemas import Keyword, KeywordInferenceRequest, KeywordInferenceResponse, KeywordResponse, Problem
+from app.schemas import EmbeddedKeywords, Keyword, KeywordGradingRequest, KeywordGradingResponse, KeywordResponse
 from app.utils import ServiceAppFactory  # noqa
 
 try:
@@ -26,7 +26,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         self.model = bentoml.pytorch.load_model(keyword_model)
         self.problem_dict = problem_dict if problem_dict else {}
 
-    def synchronize_keywords(self, input_data: KeywordInferenceRequest) -> None:
+    def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
         problem_id = input_data.problem_id
         exist_keywords = self.problem_dict[problem_id].keywords
         remain_keywords = []
@@ -44,9 +44,9 @@ class KeywordPredictRunnable(bentoml.Runnable):
             self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
 
     @bentoml.Runnable.method(batchable=False)
-    def is_correct_keyword(self, input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
+    def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
-            self.problem_dict[input_data.problem_id] = Problem(
+            self.problem_dict[input_data.problem_id] = EmbeddedKeywords(
                 keywords=input_data.keywords,
                 embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keywords]),
             )
@@ -78,7 +78,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
                     )
                 )
 
-        return KeywordInferenceResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
+        return KeywordGradingResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
 
 
 keyword_runner = bentoml.Runner(KeywordPredictRunnable, models=[keyword_model])
@@ -86,10 +86,10 @@ keyword_service = bentoml.Service(name="keyword_service", runners=[keyword_runne
 
 
 @keyword_service.api(
-    input=JSON(pydantic_model=KeywordInferenceRequest),
-    output=JSON(pydantic_model=KeywordInferenceResponse),
+    input=JSON(pydantic_model=KeywordGradingRequest),
+    output=JSON(pydantic_model=KeywordGradingResponse),
 )
-async def keyword_predict(input_data: KeywordInferenceRequest) -> KeywordInferenceResponse:
+async def keyword_predict(input_data: KeywordGradingRequest) -> KeywordGradingResponse:
     """
     {
         "problem_id": 7,

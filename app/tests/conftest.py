@@ -7,7 +7,7 @@ from bentoml import Runner, Service
 from bentoml.models import Model
 
 from app.model import save_model
-from app.schemas import Keyword, KeywordInferenceRequest, Problem
+from app.schemas import EmbeddedKeywords, Keyword, KeywordGradingRequest
 from app.service import KeywordPredictRunnable
 
 
@@ -49,8 +49,7 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
                 keyword_id += 1
 
             embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keywords])
-            problem_dict[problem_id] = Problem(
-                subject=data["problem"],
+            problem_dict[problem_id] = EmbeddedKeywords(
                 keywords=keywords,
                 embedded_keywords=embedded_keywords,
             )
@@ -58,10 +57,10 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
 
 
 @pytest.fixture(scope="function")
-def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.csv") -> KeywordInferenceRequest:
+def random_keyword_data(problem_dict: dict, path: str = "app/static/user_answer.csv") -> KeywordGradingRequest:
     df = pd.read_csv(path)
     random_idx = random.randint(0, len(df) - 1)
     random_data = df.iloc[random_idx]
     problem_id = random_data["problem_id"]
     keywords = problem_dict[problem_id].keywords
-    return KeywordInferenceRequest(problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords)
+    return KeywordGradingRequest(problem_id=problem_id, user_answer=random_data.user_answer, keywords=keywords)
