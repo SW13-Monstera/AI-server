@@ -33,8 +33,8 @@ class ContentStandard(GradingStandard):
 
 
 class Problem(BaseModel):
-    keyword_standards: List[KeywordStandard]
-    embedded_keywords: NDArray
+    keyword_standards: List[KeywordStandard] = Field("키워드 채점 기준들")
+    embedded_keywords: NDArray = Field("키워드 채점 기준 임베딩")
 
     @validator("keyword_standards")
     def validate_keywords(cls, value: List[KeywordStandard]) -> List[KeywordStandard]:
@@ -84,19 +84,19 @@ class KeywordGradingRequest(UserAnswer):
 
 
 class KeywordResponse(BaseModel):
-    id: int
-    keyword: str
-    predict_keyword_position: List[int]
-    predict_keyword: str
+    id: int = Field(title="키워드 아이디")
+    keyword: str = Field(title="키워드")
+    predict_keyword_position: List[int] = Field(title="모델이 예측한 키워드 인덱스")
+    predict_keyword: str = Field(title="모델이 예측한 키워드")
 
 
 class KeywordGradingResponse(BaseModel):
-    problem_id: int
-    correct_keywords: List[KeywordResponse]
+    problem_id: int = Field(title="문제 아이디")
+    correct_keywords: List[KeywordResponse] = Field(title="예상 키워드 리스트")
 
 
 class IntegratedGradingRequest(KeywordGradingRequest):
-    content_standards: List[ContentStandard]
+    content_standards: List[ContentStandard] = Field(title="예상 핵심 내용 리스트")
 
     @validator("content_standards")
     def validate_grading_standards(cls, value: List[ContentStandard]) -> List[ContentStandard]:
@@ -111,4 +111,4 @@ class IntegratedGradingRequest(KeywordGradingRequest):
 
 
 class IntegratedGradingResponse(KeywordGradingResponse):
-    correct_content_ids: List[int]
+    correct_content_ids: List[int] = Field(title="예상 핵심 내용 아이디 리스트")
