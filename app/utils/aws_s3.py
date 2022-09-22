@@ -9,6 +9,13 @@ from botocore.client import Config
 
 
 class AwsS3Downloader:
+    """
+    사용 방법
+    local aws credential 설정이 되었다고 가정
+    s3 = AwsS3Downloader()
+    s3.download(url="s3://cs-broker-bucket/ai-models/best_model.pt", local_dir=".cache")
+    """
+
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None) -> None:
         self.resource = boto3.Session(
             aws_access_key_id=aws_access_key_id,
@@ -52,9 +59,3 @@ class AwsS3Downloader:
         sys.stdout.flush()
 
         return file_path
-
-
-if __name__ == "__main__":
-    s3 = AwsS3Downloader()
-
-    s3.download(url="s3://cs-broker-bucket/ai-models/2022-09-18/19-06-18/best_model.pt", local_dir=".cache")
