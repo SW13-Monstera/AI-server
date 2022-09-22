@@ -19,7 +19,7 @@ def get_secret():
     try:
         get_secret_value_response = secret_manager.get_secret_value(SecretId=secret_name)
     except Exception as e:
-        log.error(e)
+        log.error("secret manager 에서 config 를 가져 오는 도중 에러가 발생했습니다.")
         raise e
     else:
         secret = eval(get_secret_value_response["SecretString"])
