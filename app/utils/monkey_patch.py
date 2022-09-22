@@ -4,7 +4,7 @@ import typing as t
 
 from bentoml._internal.context import InferenceApiContext as Context
 from bentoml._internal.io_descriptors.multipart import Multipart
-from bentoml._internal.server.service_app import ServiceAppFactory, log_exception
+from bentoml._internal.server.service_app import log_exception
 from bentoml._internal.service.inference_api import InferenceAPI
 from starlette.requests import Request
 from starlette.responses import Response
@@ -78,6 +78,3 @@ def _create_api_endpoint(
         return response
 
     return api_func
-
-
-ServiceAppFactory._create_api_endpoint = _create_api_endpoint

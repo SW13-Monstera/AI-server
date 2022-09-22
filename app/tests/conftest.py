@@ -6,14 +6,14 @@ import pytest
 from bentoml import Runner, Service
 from bentoml.models import Model
 
-from app.model import save_model
+from app.model import get_keyword_grading_model
 from app.schemas import KeywordGradingRequest, KeywordStandard, Problem
 from app.service import KeywordPredictRunnable
 
 
 @pytest.fixture(scope="session")
 def init_save_model() -> None:
-    save_model()
+    get_keyword_grading_model()
 
 
 @pytest.fixture(scope="session")

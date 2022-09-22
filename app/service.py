@@ -1,29 +1,25 @@
 from typing import Optional
 
 import bentoml
-from bentoml.exceptions import NotFound
+from bentoml._internal.server.service_app import ServiceAppFactory
 from bentoml.io import JSON
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.model import save_model
+from app.model import get_keyword_grading_model
 from app.schemas import KeywordGradingRequest, KeywordGradingResponse, KeywordResponse, KeywordStandard, Problem
-from app.utils import ServiceAppFactory  # noqa
+from app.utils.monkey_patch import _create_api_endpoint
 
-try:
-    keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
-except NotFound:
-    save_model()
-    keyword_model = bentoml.pytorch.get("sentence-ko-roberta")
+ServiceAppFactory._create_api_endpoint = _create_api_endpoint
 
 
 class KeywordPredictRunnable(bentoml.Runnable):
     SUPPORTED_RESOURCES = ("cpu",)
     SUPPORTS_CPU_MULTI_THREADING = True
-    threshold = 0.3
+    threshold = 0.5
     word_concat_size = 3
 
     def __init__(self, problem_dict: Optional[dict] = None):
-        self.model = bentoml.pytorch.load_model(keyword_model)
+        self.model = get_keyword_grading_model()
         self.problem_dict = problem_dict if problem_dict else {}
 
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
@@ -81,7 +77,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         return KeywordGradingResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
 
 
-keyword_runner = bentoml.Runner(KeywordPredictRunnable, models=[keyword_model])
+keyword_runner = bentoml.Runner(KeywordPredictRunnable)
 keyword_service = bentoml.Service(name="keyword_service", runners=[keyword_runner])
 
 
@@ -94,26 +90,22 @@ async def keyword_predict(input_data: KeywordGradingRequest) -> KeywordGradingRe
     {
     "problem_id": 7,
     "user_answer": "쿠키도 만료시간이 있지만 파일로 저장되기 때문에 브라우저를 종료해도 계속해서 정보가 남아 있을 수 있습니다. 또한 만료기간을 넉넉하게 잡아두면 쿠키삭제를 할 때 까지 유지될 수도 있습니다. 반면에 세션도 만료시간을 정할 수 있지만 브라우저가 종료되면 만료시간에 상관없이 삭제됩니다. 예를 들어, 크롬에서 다른 탭을 사용해도 세션을 공유됩니다. 다른 브라우저를 사용하게 되면 다른 세션을 사용할 수 있습니다.",
-    "grading_standards": [
+    "keyword_standards": [
             {
                 "id": 0,
-                "content":"Lifecycle",
-                "type": "keyword"
+                "content":"Lifecycle"
             },
             {
                 "id": 1,
-                "content":"보안",
-                "type": "keyword"
+                "content":"보안"
             },
             {
                 "id": 2,
-                "content":"저장위치",
-                "type": "keyword"
+                "content":"저장위치"
             },
             {
                 "id": 3,
-                "content":"속도",
-                "type": "keyword"
+                "content":"속도"
             }
         ]
     }
