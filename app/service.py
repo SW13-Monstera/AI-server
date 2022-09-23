@@ -51,7 +51,6 @@ async def integrate_predict(input_data: IntegratedGradingRequest) -> IntegratedG
 
     return IntegratedGradingResponse(
         problem_id=keyword_grading_result.problem_id,
-        # user_answer=keyword_grading_result.user_answer,
         correct_keywords=keyword_grading_result.correct_keywords,
         correct_contents=content_grading_result.correct_contents,
     )
