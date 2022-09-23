@@ -9,9 +9,7 @@ jobs:
     steps:
         - name: checkout
           uses: actions/checkout@v2
-        - name: stage define
-          run: |
-            export STAGE=dev
+
         - name: aws configure
           uses: aws-actions/configure-aws-credentials@v1
           with:

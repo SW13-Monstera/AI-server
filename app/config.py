@@ -29,7 +29,7 @@ def get_secret():
 STAGE = typing.cast(Literal["local", "dev", "prod"], os.getenv("STAGE"))
 
 if not STAGE:
-    raise Exception("STAGE is not defined")
+    STAGE = "dev"
 
 get_secret()
 HUGGING_FACE_ACCESS_TOKEN = os.getenv("HUGGING_FACE_ACCESS_TOKEN")
