@@ -5,6 +5,7 @@ on: [push]
 jobs:
   run:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
         - name: checkout
           uses: actions/checkout@v2
