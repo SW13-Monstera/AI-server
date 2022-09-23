@@ -2,20 +2,21 @@ import random
 
 import pandas as pd
 import pytest
+from openprompt import PromptForClassification
 from sentence_transformers import SentenceTransformer
 
-from app.model import get_keyword_grading_model
+from app.model import get_content_grading_model, get_keyword_grading_model
 from app.schemas import KeywordGradingRequest, KeywordStandard, Problem
 
 
 @pytest.fixture(scope="session")
-def init_save_model() -> None:
-    get_keyword_grading_model()
+def keyword_model() -> SentenceTransformer:
+    return get_keyword_grading_model()
 
 
 @pytest.fixture(scope="session")
-def keyword_model(init_save_model) -> SentenceTransformer:
-    return get_keyword_grading_model()
+def content_model() -> PromptForClassification:
+    return get_content_grading_model()
 
 
 @pytest.fixture(scope="session")
