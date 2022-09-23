@@ -1,14 +1,11 @@
 import random
 
-import bentoml
 import pandas as pd
 import pytest
-from bentoml import Runner, Service
-from bentoml.models import Model
+from sentence_transformers import SentenceTransformer
 
 from app.model import get_keyword_grading_model
 from app.schemas import KeywordGradingRequest, KeywordStandard, Problem
-from app.service import KeywordPredictRunnable
 
 
 @pytest.fixture(scope="session")
@@ -17,23 +14,12 @@ def init_save_model() -> None:
 
 
 @pytest.fixture(scope="session")
-def keyword_model(init_save_model) -> Model:
-    return bentoml.pytorch.get("sentence-ko-roberta")
-
-
-@pytest.fixture(scope="session")
-def keyword_runner(keyword_model) -> Runner:
-    return bentoml.Runner(KeywordPredictRunnable, models=[keyword_model])
-
-
-@pytest.fixture(scope="session")
-def keyword_service(keyword_runner) -> Service:
-    return bentoml.Service(name="keyword_service", runners=[keyword_runner])
+def keyword_model(init_save_model) -> SentenceTransformer:
+    return get_keyword_grading_model()
 
 
 @pytest.fixture(scope="session")
 def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dict:
-    pytorch_keyword_model = bentoml.pytorch.load_model(keyword_model)
     df = pd.read_csv(path)
     problem_dict = {}
     keyword_id = 0
@@ -48,7 +34,7 @@ def problem_dict(keyword_model, path: str = "app/static/user_answer.csv") -> dic
                 keyword_standards.append(KeywordStandard(id=keyword_id, content=content))
                 keyword_id += 1
 
-            embedded_keywords = pytorch_keyword_model.encode([keyword.content for keyword in keyword_standards])
+            embedded_keywords = keyword_model.encode([keyword.content for keyword in keyword_standards])
             problem_dict[problem_id] = Problem(
                 keyword_standards=keyword_standards,
                 embedded_keywords=embedded_keywords,
