@@ -83,22 +83,10 @@ class KeywordGradingRequest(UserAnswer):
         return value
 
 
-class KeywordResponse(BaseModel):
-    id: int = Field(title="키워드 아이디")
-    keyword: str = Field(title="키워드")
-    predict_keyword_position: List[int] = Field(title="모델이 예측한 키워드 인덱스")
-    predict_keyword: str = Field(title="모델이 예측한 키워드")
+class ContentGradingRequest(UserAnswer):
+    content_standards: List[ContentStandard] = Field(title="내용 채점 기준 리스트")
 
-
-class KeywordGradingResponse(BaseModel):
-    problem_id: int = Field(title="문제 아이디")
-    correct_keywords: List[KeywordResponse] = Field(title="예상 키워드 리스트")
-
-
-class IntegratedGradingRequest(KeywordGradingRequest):
-    content_standards: List[ContentStandard] = Field(title="예상 핵심 내용 리스트")
-
-    @validator("content_standards")
+    @validator("keyword_standards", check_fields=False)
     def validate_grading_standards(cls, value: List[ContentStandard]) -> List[ContentStandard]:
         if not value:
             raise APIException(
@@ -110,5 +98,31 @@ class IntegratedGradingRequest(KeywordGradingRequest):
         return value
 
 
-class IntegratedGradingResponse(KeywordGradingResponse):
-    correct_content_ids: List[int] = Field(title="예상 핵심 내용 아이디 리스트")
+class KeywordResponse(BaseModel):
+    id: int = Field(title="키워드 채점 기준 아이디")
+    keyword: str = Field(title="키워드")
+    predict_keyword_position: List[int] = Field(title="모델이 예측한 키워드 인덱스")
+    predict_keyword: str = Field(title="모델이 예측한 키워드")
+
+
+class KeywordGradingResponse(BaseModel):
+    problem_id: int = Field(title="문제 아이디")
+    correct_keywords: List[KeywordResponse] = Field(title="예상 키워드 리스트")
+
+
+class ContentResponse(BaseModel):
+    id: int = Field(title="내용 채점 기준 아이디")
+    content: str = Field(title="내용")
+
+
+class ContentGradingResponse(BaseModel):
+    problem_id: int = Field(title="문제 아이디")
+    correct_contents: List[ContentResponse] = Field(title="예상 핵심 내용 아이디 리스트")
+
+
+class IntegratedGradingRequest(KeywordGradingRequest, ContentGradingRequest):
+    ...
+
+
+class IntegratedGradingResponse(KeywordGradingResponse, ContentGradingResponse):
+    ...
