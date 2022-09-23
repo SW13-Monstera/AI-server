@@ -26,10 +26,11 @@ def get_secret():
         os.environ.update(secret)
 
 
-STAGE = typing.cast(Literal["local", "test", "dev", "prod"], os.getenv("STAGE"))
+STAGE = typing.cast(Literal["local", "dev", "prod"], os.getenv("STAGE"))
 
 if not STAGE:
     raise Exception("STAGE is not defined")
+
 get_secret()
 HUGGING_FACE_ACCESS_TOKEN = os.getenv("HUGGING_FACE_ACCESS_TOKEN")
 HUGGING_FACE_NAME = "ekzm8523"
