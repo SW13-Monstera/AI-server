@@ -3,6 +3,7 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
+    exclude: ^environment.yaml
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
