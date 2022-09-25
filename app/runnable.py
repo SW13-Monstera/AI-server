@@ -6,6 +6,7 @@ from openprompt import PromptDataLoader
 from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
 from sklearn.metrics.pairwise import cosine_similarity
+import logging
 
 from app.model import get_content_grading_model, get_keyword_grading_model
 from app.schemas import (
@@ -18,6 +19,7 @@ from app.schemas import (
     KeywordStandard,
     Problem,
 )
+log = logging.getLogger("__main__")
 
 
 class KeywordPredictRunnable(bentoml.Runnable):
@@ -27,10 +29,12 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
     def __init__(self, problem_dict: Optional[dict] = None):
         self.problem_dict = problem_dict if problem_dict else {}
-        self.device = torch.device("cuda")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        log.info(f"keyword model serving on {self.device}")
         self.model = get_keyword_grading_model().to(self.device)
 
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
+        log.info(input_data)
         problem_id = input_data.problem_id
         exist_keywords = self.problem_dict[problem_id].keyword_standards
         remain_keywords = []
@@ -91,8 +95,8 @@ class ContentPredictRunnable(bentoml.Runnable):
 
     def __init__(self):
         self.model = get_content_grading_model()
-        self.device = torch.device("cuda")
-        print(torch.cuda.is_available())
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"content runnable : {self.device}")
         self.template = self.model.template
         self.verbalizer = self.model.verbalizer
         special_tokens_dict = {"additional_special_tokens": ["</s>", "<unk>", "<pad>"]}
