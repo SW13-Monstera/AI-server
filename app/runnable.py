@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 import bentoml
@@ -6,7 +7,6 @@ from openprompt import PromptDataLoader
 from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
 from sklearn.metrics.pairwise import cosine_similarity
-import logging
 
 from app.model import get_content_grading_model, get_keyword_grading_model
 from app.schemas import (
@@ -19,6 +19,7 @@ from app.schemas import (
     KeywordStandard,
     Problem,
 )
+
 log = logging.getLogger("__main__")
 
 
@@ -111,8 +112,8 @@ class ContentPredictRunnable(bentoml.Runnable):
         user_answer = input_data.user_answer.strip()
         input_data_list = []
         for content_standard in input_data.content_standards:
-            input_data_list.append(InputExample(
-                text_a=user_answer, text_b=content_standard.content.strip(), guid=content_standard.id)
+            input_data_list.append(
+                InputExample(text_a=user_answer, text_b=content_standard.content.strip(), guid=content_standard.id)
             )
 
         data_loader = PromptDataLoader(
@@ -132,12 +133,12 @@ class ContentPredictRunnable(bentoml.Runnable):
                 model_inputs = model_inputs.to(self.device)
                 logits = self.model(model_inputs)
                 predicts = torch.argmax(logits, dim=1).cpu().numpy()
-                guids = model_inputs.guid.cpu().numpy()
-                for guid, predict in zip(guids, predicts):
+                for idx, predict in enumerate(predicts):
                     if predict == 1:
                         correct_contents.append(
-                            ContentResponse(id=guid, content="")
+                            ContentResponse(id=input_data_list[idx].guid, content=input_data_list[idx].text_b)
                         )
+
                 del model_inputs, logits
         torch.cuda.empty_cache()
 

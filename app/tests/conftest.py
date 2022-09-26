@@ -64,9 +64,10 @@ def random_content_data(problem_df: pd.DataFrame) -> ContentGradingRequest:
     random_idx = random.randint(0, len(problem_df) - 1)
     random_series = problem_df.iloc[random_idx]
     content_standards = []
+    offset = random.randint(0, 10000)
     for i, criterion in enumerate(eval(random_series["scoring_criterion"])):
         content, _ = map(str.strip, criterion.split("-"))
-        content_standards.append(ContentStandard(id=i, content=content))
+        content_standards.append(ContentStandard(id=offset + i, content=content))
 
     return ContentGradingRequest(
         problem_id=random_idx, user_answer=random_series.user_answer, content_standards=content_standards
