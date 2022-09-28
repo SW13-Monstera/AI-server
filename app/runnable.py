@@ -1,4 +1,5 @@
 import logging
+from pprint import pformat
 from typing import Optional
 
 import bentoml
@@ -31,11 +32,10 @@ class KeywordPredictRunnable(bentoml.Runnable):
     def __init__(self, problem_dict: Optional[dict] = None):
         self.problem_dict = problem_dict if problem_dict else {}
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        log.info(f"keyword model serving on {self.device}")
+        log.info(f"keyword predict model is running on {self.device}")
         self.model = get_keyword_grading_model().to(self.device)
 
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
-        log.info(input_data)
         problem_id = input_data.problem_id
         exist_keywords = self.problem_dict[problem_id].keyword_standards
         remain_keywords = []
@@ -54,6 +54,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
+        log.info(pformat(input_data.__dict__))
+        log.info(input_data)
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
                 keyword_standards=input_data.keyword_standards,
@@ -86,8 +88,9 @@ class KeywordPredictRunnable(bentoml.Runnable):
                         predict_keyword=input_data.user_answer[start_idx:end_idx],
                     )
                 )
-
-        return KeywordGradingResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
+        response_data = KeywordGradingResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
+        log.info(pformat(response_data.__dict__))
+        return response_data
 
 
 class ContentPredictRunnable(bentoml.Runnable):
@@ -97,7 +100,7 @@ class ContentPredictRunnable(bentoml.Runnable):
     def __init__(self):
         self.model = get_content_grading_model()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"content runnable : {self.device}")
+        log.info(f"content predict model is running on : {self.device}")
         self.template = self.model.template
         self.verbalizer = self.model.verbalizer
         special_tokens_dict = {"additional_special_tokens": ["</s>", "<unk>", "<pad>"]}
@@ -109,6 +112,7 @@ class ContentPredictRunnable(bentoml.Runnable):
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_content(self, input_data: ContentGradingRequest) -> ContentGradingResponse:
+        log.info(pformat(input_data.__dict__))
         user_answer = input_data.user_answer.strip()
         input_data_list = []
         for content_standard in input_data.content_standards:
@@ -141,5 +145,6 @@ class ContentPredictRunnable(bentoml.Runnable):
 
                 del model_inputs, logits
         torch.cuda.empty_cache()
-
-        return ContentGradingResponse(problem_id=input_data.problem_id, correct_contents=correct_contents)
+        response_data = ContentGradingResponse(problem_id=input_data.problem_id, correct_contents=correct_contents)
+        log.info(pformat(response_data.__dict__))
+        return response_data

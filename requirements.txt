@@ -8,3 +8,4 @@ pytest-cov==3.0.0
 pandas==1.4.3
 openprompt==1.0.1
 boto3==1.24.77
+nltk==3.7
