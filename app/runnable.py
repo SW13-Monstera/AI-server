@@ -55,7 +55,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         log.info(pformat(input_data.__dict__))
-        log.info(input_data)
+
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             self.problem_dict[input_data.problem_id] = Problem(
                 keyword_standards=input_data.keyword_standards,
