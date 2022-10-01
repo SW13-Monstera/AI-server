@@ -47,3 +47,10 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
     problem_keyword_set = set(keyword.id for keyword in runnable.problem_dict[test_problem_id].keyword_standards)
     for correct_keyword in result.correct_keywords:
         assert correct_keyword.id in problem_keyword_set, "problem_dict에 맞지 않는 키워드를 이용해 예측하였습니다."
+
+
+def test_keyword_predict_runnable_3(problem_dict: dict, random_keyword_data: KeywordGradingRequest) -> None:
+    """
+    ','로 구분되어 있는 키워드 기준들을 함께 보면서 유사도 측정
+    """
+    print()
