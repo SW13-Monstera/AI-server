@@ -1,9 +1,8 @@
 import random
 
-import numpy as np
-import pandas
 import pandas as pd
 import pytest
+from numpy import nan
 from openprompt import PromptForClassification
 from sentence_transformers import SentenceTransformer
 
@@ -29,24 +28,24 @@ def user_answer_df(
     return pd.read_csv(path)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def problem_dict(keyword_model: SentenceTransformer, user_answer_df) -> dict:
     problem_dict = {}
-    keyword_id = 0
-    # criterion parsing
+
     for _, data in user_answer_df.iterrows():
         problem_id = data["problem_id"]
+        keyword_id = problem_id * 10
         if problem_id not in problem_dict:
             keyword_standards = []
             for content in eval(data["keyword_criterion"]):
-                if content is np.nan:
+                keyword_id += 1
+                if content is nan:
                     content = "NULL"
                 if "," in content:
                     for split_content in content.split(","):
                         keyword_standards.append(KeywordStandard(id=keyword_id, content=split_content))
                 else:
                     keyword_standards.append(KeywordStandard(id=keyword_id, content=content))
-                keyword_id += 1
 
             embedded_keywords = keyword_model.encode([keyword.content for keyword in keyword_standards])
             problem_dict[problem_id] = Problem(
@@ -61,9 +60,14 @@ def random_keyword_data(problem_dict: dict, user_answer_df) -> KeywordGradingReq
     random_idx = random.randint(0, len(user_answer_df) - 1)
     random_data = user_answer_df.iloc[random_idx]
     problem_id = random_data["problem_id"]
-    keyword_standards = problem_dict[problem_id].keyword_standards
+    keyword_standards = []
+    keyword_id = problem_id * 10 + 1
+    for i, keyword_content in enumerate(eval(random_data.keyword_criterion)):
+        if keyword_content is nan:
+            keyword_content = "NULL"
+        keyword_standards.append(KeywordStandard(id=keyword_id + i, content=keyword_content))
     return KeywordGradingRequest(
-        problem_id=problem_id, user_answer=random_data.user_answer, keyword_standards=keyword_standards
+        problem_id=random_data.problem_id, user_answer=random_data.user_answer, keyword_standards=keyword_standards
     )
 
 
@@ -74,18 +78,24 @@ def random_multi_candidate_keyword_data(problem_dict: dict, user_answer_df) -> K
         random_idx = random.randint(0, len(user_answer_df) - 1)
         random_data = user_answer_df.iloc[random_idx]
         standard_contents = [standard.content for standard in problem_dict[random_data.problem_id].keyword_standards]
-        for criterion in eval(random_data.keyword_criterion):
+
+        for content in eval(random_data.keyword_criterion):
+            if content is nan:
+                content = "NULL"
             err_message = f"static data file에 무결성이 깨졌습니다. problem : {random_data.problem}"
-            if "," in criterion:
-                for split_criterion in criterion.split(", "):
+            if "," in content:
+                for split_criterion in content.split(", "):
                     assert split_criterion in standard_contents, err_message
                 flag = False
                 break
-            assert criterion in standard_contents, err_message
-    keyword_standards = []
+            assert content in standard_contents, err_message
 
+    keyword_standards = []
+    keyword_id = random_data.problem_id * 10 + 1
     for i, keyword_content in enumerate(eval(random_data.keyword_criterion)):
-        keyword_standards.append(KeywordStandard(id=random_idx * 10 + i + 1, content=keyword_content))
+        if keyword_content is nan:
+            keyword_content = "NULL"
+        keyword_standards.append(KeywordStandard(id=keyword_id + i, content=keyword_content))
     return KeywordGradingRequest(
         problem_id=random_data.problem_id, user_answer=random_data.user_answer, keyword_standards=keyword_standards
     )

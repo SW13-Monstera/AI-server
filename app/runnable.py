@@ -43,21 +43,26 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
         for exist_keyword in exist_keywords:
             if exist_keyword.id in input_keyword_dict:
-                input_keyword_dict.pop(exist_keyword.id)
                 remain_keywords.append(exist_keyword)
-        is_keyword_changed = len(input_keyword_dict) > 0
-        if is_keyword_changed:
-            for new_keyword_id, new_keyword_content in input_keyword_dict.items():
-                remain_keywords.append(KeywordStandard(id=new_keyword_id, content=new_keyword_content))
-            self.problem_dict[problem_id].keyword_standards = remain_keywords
-            new_embedded_keywords = self.model.encode([keyword.content for keyword in remain_keywords])
-            self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
+        remain_id_set = set(keyword.id for keyword in remain_keywords)
+
+        for new_keyword in input_data.keyword_standards:
+
+            if new_keyword.id in remain_id_set:
+                continue
+            if "," in new_keyword.content:
+                for content in new_keyword.content.split(","):
+                    remain_keywords.append(KeywordStandard(id=new_keyword.id, content=content.strip()))
+            else:
+                remain_keywords.append(KeywordStandard(id=new_keyword.id, content=new_keyword.content))
+        self.problem_dict[problem_id].keyword_standards = remain_keywords
+        new_embedded_keywords = self.model.encode([keyword.content for keyword in remain_keywords])
+        self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         log.info(pformat(input_data.__dict__))
 
-        # keyword_ids = []  # [keyword_id]
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
             keyword_standards = []
             for keyword_standard in input_data.keyword_standards:
@@ -66,10 +71,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
                         split_keyword_standard = keyword_standard.copy()
                         split_keyword_standard.content = content
                         keyword_standards.append(split_keyword_standard)
-                        # keyword_ids.append(keyword_standard.id)
                 else:
                     keyword_standards.append(keyword_standard)
-                    # keyword_ids.append(keyword_standard.id)
 
             self.problem_dict[input_data.problem_id] = Problem(
                 keyword_standards=keyword_standards,
@@ -85,15 +88,12 @@ class KeywordPredictRunnable(bentoml.Runnable):
             for split_answer_start_idx in range(len(split_answer) - concat_size + 1):
                 split_answer_end_idx = split_answer_start_idx + concat_size
                 tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
-        # if len(split_answer) < self.word_concat_size:
-        #     tokenized_answer.append(" ".join(split_answer))
 
         tokenized_answer_embedding = self.model.encode(tokenized_answer)
         similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
         predicts = []
         keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
         for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
-            # target_keyword_id = keyword_ids[keyword_idx]
             target_keyword_id = problem.keyword_standards[keyword_idx].id
             score = similarity_scores[keyword_idx][embedded_keyword_token_idx]
             if self.threshold < score and keyword_score_dict[target_keyword_id][1] < score:
