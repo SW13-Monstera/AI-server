@@ -40,6 +40,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         exist_keywords = self.problem_dict[problem_id].keyword_standards
         remain_keywords = []
         input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.keyword_standards}
+
         for exist_keyword in exist_keywords:
             if exist_keyword.id in input_keyword_dict:
                 input_keyword_dict.pop(exist_keyword.id)
@@ -56,10 +57,23 @@ class KeywordPredictRunnable(bentoml.Runnable):
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         log.info(pformat(input_data.__dict__))
 
+        # keyword_ids = []  # [keyword_id]
         if input_data.problem_id not in self.problem_dict:  # 새로운 문제
+            keyword_standards = []
+            for keyword_standard in input_data.keyword_standards:
+                if "," in keyword_standard.content:  # 키워드 중복 기준 처리
+                    for content in keyword_standard.content.split(", "):
+                        split_keyword_standard = keyword_standard.copy()
+                        split_keyword_standard.content = content
+                        keyword_standards.append(split_keyword_standard)
+                        # keyword_ids.append(keyword_standard.id)
+                else:
+                    keyword_standards.append(keyword_standard)
+                    # keyword_ids.append(keyword_standard.id)
+
             self.problem_dict[input_data.problem_id] = Problem(
-                keyword_standards=input_data.keyword_standards,
-                embedded_keywords=self.model.encode([keyword.content for keyword in input_data.keyword_standards]),
+                keyword_standards=keyword_standards,
+                embedded_keywords=self.model.encode([standard.content for standard in keyword_standards]),
             )
         else:  # 기존에 있던 문제라면 validation check
             self.synchronize_keywords(input_data)
@@ -67,23 +81,32 @@ class KeywordPredictRunnable(bentoml.Runnable):
         problem = self.problem_dict[input_data.problem_id]
         split_answer = input_data.user_answer.strip().split()
         tokenized_answer = []
-        for split_answer_start_idx in range(len(split_answer) - self.word_concat_size + 1):
-            split_answer_end_idx = split_answer_start_idx + self.word_concat_size
-            tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
-        if len(split_answer) < self.word_concat_size:
-            tokenized_answer.append(" ".join(split_answer))
+        for concat_size in range(1, self.word_concat_size + 1):
+            for split_answer_start_idx in range(len(split_answer) - concat_size + 1):
+                split_answer_end_idx = split_answer_start_idx + concat_size
+                tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
+        # if len(split_answer) < self.word_concat_size:
+        #     tokenized_answer.append(" ".join(split_answer))
 
         tokenized_answer_embedding = self.model.encode(tokenized_answer)
         similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
         predicts = []
+        keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
         for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
-            if self.threshold < similarity_scores[keyword_idx][embedded_keyword_token_idx]:
+            # target_keyword_id = keyword_ids[keyword_idx]
+            target_keyword_id = problem.keyword_standards[keyword_idx].id
+            score = similarity_scores[keyword_idx][embedded_keyword_token_idx]
+            if self.threshold < score and keyword_score_dict[target_keyword_id][1] < score:
+                keyword_score_dict[target_keyword_id][:2] = embedded_keyword_token_idx, score
+
+        for keyword_id, (embedded_keyword_token_idx, score, content) in keyword_score_dict.items():
+            if score > self.threshold:
                 start_idx = input_data.user_answer.find(tokenized_answer[embedded_keyword_token_idx])
                 end_idx = start_idx + len(tokenized_answer[embedded_keyword_token_idx])
                 predicts.append(
                     KeywordResponse(
-                        id=problem.keyword_standards[keyword_idx].id,
-                        keyword=problem.keyword_standards[keyword_idx].content,
+                        id=keyword_id,
+                        keyword=content,
                         predict_keyword_position=[start_idx, end_idx],
                         predict_keyword=input_data.user_answer[start_idx:end_idx],
                     )

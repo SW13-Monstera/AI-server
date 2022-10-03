@@ -2,17 +2,18 @@ from app.schemas import KeywordGradingRequest, KeywordStandard
 from app.service import KeywordPredictRunnable
 
 
-def test_keyword_predict_runnable(random_keyword_data: KeywordGradingRequest) -> None:
+def test_keyword_predict_runnable(
+    keyword_runnable: KeywordPredictRunnable, random_keyword_data: KeywordGradingRequest
+) -> None:
     """
     로컬 메모리에 problem 정보가 없을 때 새롭게 problem에 대한 키워드 정보를 생성하고 예측한다.
     """
     test_problem_id = random_keyword_data.problem_id
-    runnable = KeywordPredictRunnable()
-    assert runnable.problem_dict == {}, "init problem dict는 빈 dict 상태입니다."
-    result = runnable.is_correct_keyword(random_keyword_data)
-    assert test_problem_id in runnable.problem_dict, "new problem 정보가 업데이트 되지 않았습니다."
+    assert keyword_runnable.problem_dict == {}, "init problem dict는 빈 dict 상태입니다."
+    result = keyword_runnable.is_correct_keyword(random_keyword_data)
+    assert test_problem_id in keyword_runnable.problem_dict, "new problem 정보가 업데이트 되지 않았습니다."
     assert (
-        random_keyword_data.keyword_standards == runnable.problem_dict[test_problem_id].keyword_standards
+        random_keyword_data.keyword_standards == keyword_runnable.problem_dict[test_problem_id].keyword_standards
     ), "키워드 동기화가 되지 않았습니다."
     assert test_problem_id == result.problem_id, "request와 response의 문제 ID가 같지 않습니다."
 
@@ -49,8 +50,24 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
         assert correct_keyword.id in problem_keyword_set, "problem_dict에 맞지 않는 키워드를 이용해 예측하였습니다."
 
 
-def test_keyword_predict_runnable_3(problem_dict: dict, random_keyword_data: KeywordGradingRequest) -> None:
+def test_keyword_predict_runnable_3(
+    keyword_runnable: KeywordPredictRunnable, random_multi_candidate_keyword_data: KeywordGradingRequest
+) -> None:
     """
     ','로 구분되어 있는 키워드 기준들을 함께 보면서 유사도 측정
     """
-    print()
+    standard_with_comma = ""
+    for standard in random_multi_candidate_keyword_data.keyword_standards:
+        if "," in standard.content:
+            standard_with_comma = standard.content
+    random_multi_candidate_keyword_data.user_answer += standard_with_comma
+    response = keyword_runnable.is_correct_keyword(random_multi_candidate_keyword_data)
+    assert standard_with_comma in (keyword.keyword for keyword in response.correct_keywords)
+
+
+def test_keyword_predict_runnable_4(
+    problem_dict: dict, random_multi_candidate_keyword_data: KeywordGradingRequest
+) -> None:
+    """
+    새롭게 ','가 포함된 키워드가 추가되었을 때 update 되는지 테스트
+    """
