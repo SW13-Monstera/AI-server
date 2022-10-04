@@ -1,5 +1,4 @@
 import random
-from pprint import pprint
 
 from app.schemas import KeywordGradingRequest, KeywordStandard
 from app.service import KeywordPredictRunnable
@@ -34,7 +33,6 @@ def test_keyword_predict_runnable_2(problem_dict: dict, random_keyword_data: Key
     """
     기존에 있던 키워드가 하나 지워지고 새로 생겼을 때 메모리에서도 지우고 새로 생긴 키워드를 임베딩해서 저장한다.
     """
-    pprint(random_keyword_data.keyword_standards)
     every_keyword_ids = []
     for problem_id in problem_dict:
         for keyword in problem_dict[problem_id].keyword_standards:
@@ -92,8 +90,6 @@ def test_keyword_predict_runnable_4(
     새롭게 ','가 포함된 키워드가 추가되었을 때 update 되는지 테스트
     """
     runnable = KeywordPredictRunnable(problem_dict)
-    pprint(problem_dict[random_multi_candidate_keyword_data.problem_id].keyword_standards)
-    pprint(random_multi_candidate_keyword_data.keyword_standards)
     id_set_1 = set(map(lambda x: x.id, problem_dict[random_multi_candidate_keyword_data.problem_id].keyword_standards))
     id_set_2 = set(map(lambda x: x.id, random_multi_candidate_keyword_data.keyword_standards))
     assert id_set_1 == id_set_2, "테스트 데이터의 설계가 잘못 되었습니다. keyword의 id들을 확인해주세요"
@@ -111,9 +107,7 @@ def test_keyword_predict_runnable_4(
     assert (
         len(runnable_problem.keyword_standards) == runnable_problem.embedded_keywords.shape[0]
     ), "업데이트된 Problem의 shape 정보가 맞지 않습니다."
-    print(random_multi_candidate_keyword_data.problem_id)
     for runnable_keyword in runnable_problem.keyword_standards:
-        print(runnable_keyword)
         success = False
         for test_keyword in random_multi_candidate_keyword_data.keyword_standards:
             if runnable_keyword.id == test_keyword.id and runnable_keyword.content in test_keyword.content:
