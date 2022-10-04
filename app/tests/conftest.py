@@ -41,11 +41,9 @@ def problem_dict(keyword_model: SentenceTransformer, user_answer_df) -> dict:
                 keyword_id += 1
                 if content is nan:
                     content = "NULL"
-                if "," in content:
-                    for split_content in content.split(","):
-                        keyword_standards.append(KeywordStandard(id=keyword_id, content=split_content))
-                else:
-                    keyword_standards.append(KeywordStandard(id=keyword_id, content=content))
+
+                for split_content in content.split(","):
+                    keyword_standards.append(KeywordStandard(id=keyword_id, content=split_content))
 
             embedded_keywords = keyword_model.encode([keyword.content for keyword in keyword_standards])
             problem_dict[problem_id] = Problem(

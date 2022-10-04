@@ -39,13 +39,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
         log.info(f"problem id [{input_data.problem_id}] : create problem")
         keyword_standards = []
         for keyword_standard in input_data.keyword_standards:
-            if "," in keyword_standard.content:  # 키워드 중복 기준 처리
-                for content in keyword_standard.content.split(", "):
-                    keyword_standards.append(KeywordStandard(id=keyword_standard.id, content=content.strip()))
-            else:
-                keyword_standards.append(
-                    KeywordStandard(id=keyword_standard.id, content=keyword_standard.content.strip())
-                )
+            for content in keyword_standard.content.split(", "):
+                keyword_standards.append(KeywordStandard(id=keyword_standard.id, content=content.strip()))
 
         self.problem_dict[input_data.problem_id] = Problem(
             keyword_standards=keyword_standards,
@@ -113,27 +108,30 @@ class ContentPredictRunnable(bentoml.Runnable):
     SUPPORTS_CPU_MULTI_THREADING = False
 
     def __init__(self):
-        self.model = get_content_grading_model()
+        model = get_content_grading_model()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         log.info(f"content predict model is running on : {self.device}")
-        self.template = self.model.template
-        self.verbalizer = self.model.verbalizer
+        self.template = model.template
+        self.verbalizer = model.verbalizer
         special_tokens_dict = {"additional_special_tokens": ["</s>", "<unk>", "<pad>"]}
-        self.model.tokenizer.add_special_tokens(special_tokens_dict)
+        model.tokenizer.add_special_tokens(special_tokens_dict)
         self.wrapped_tokenizer = T5TokenizerWrapper(
-            max_seq_length=256, decoder_max_length=3, tokenizer=self.model.tokenizer, truncate_method="head"
+            max_seq_length=256, decoder_max_length=3, tokenizer=model.tokenizer, truncate_method="head"
         )
-        self.model = self.model.to(self.device)
+        self.model = model.to(self.device)
+
+    @staticmethod
+    def is_correct(predict) -> bool:
+        return predict == 1
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_content(self, input_data: ContentGradingRequest) -> ContentGradingResponse:
         log.info(pformat(input_data.__dict__))
         user_answer = input_data.user_answer.strip()
-        input_data_list = []
-        for content_standard in input_data.content_standards:
-            input_data_list.append(
-                InputExample(text_a=user_answer, text_b=content_standard.content.strip(), guid=content_standard.id)
-            )
+        input_data_list = [
+            InputExample(text_a=user_answer, text_b=content_standard.content.strip(), guid=content_standard.id)
+            for content_standard in input_data.content_standards
+        ]
 
         data_loader = PromptDataLoader(
             dataset=input_data_list,
@@ -152,11 +150,11 @@ class ContentPredictRunnable(bentoml.Runnable):
                 model_inputs = model_inputs.to(self.device)
                 logits = self.model(model_inputs)
                 predicts = torch.argmax(logits, dim=1).cpu().numpy()
-                for idx, predict in enumerate(predicts):
-                    if predict == 1:
-                        correct_contents.append(
-                            ContentResponse(id=input_data_list[idx].guid, content=input_data_list[idx].text_b)
-                        )
+                correct_contents.extend(
+                    ContentResponse(id=input_data_list[idx].guid, content=input_data_list[idx].text_b)
+                    for idx, predict in enumerate(predicts)
+                    if self.is_correct(predict)
+                )
 
                 del model_inputs, logits
         torch.cuda.empty_cache()
