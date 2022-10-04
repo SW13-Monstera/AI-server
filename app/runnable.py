@@ -35,62 +35,54 @@ class KeywordPredictRunnable(bentoml.Runnable):
         log.info(f"keyword predict model is running on {self.device}")
         self.model = get_keyword_grading_model().to(self.device)
 
+    def create_problem(self, input_data: KeywordGradingRequest) -> None:
+        log.info(f"problem id [{input_data.problem_id}] : create problem")
+        keyword_standards = []
+        for keyword_standard in input_data.keyword_standards:
+            if "," in keyword_standard.content:  # 키워드 중복 기준 처리
+                for content in keyword_standard.content.split(", "):
+                    keyword_standards.append(KeywordStandard(id=keyword_standard.id, content=content.strip()))
+            else:
+                keyword_standards.append(
+                    KeywordStandard(id=keyword_standard.id, content=keyword_standard.content.strip())
+                )
+
+        self.problem_dict[input_data.problem_id] = Problem(
+            keyword_standards=keyword_standards,
+            embedded_keywords=self.model.encode([standard.content for standard in keyword_standards]),
+        )
+
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
         problem_id = input_data.problem_id
-        exist_keywords = self.problem_dict[problem_id].keyword_standards
-        remain_keywords = []
-        input_keyword_dict = {input_keyword.id: input_keyword.content for input_keyword in input_data.keyword_standards}
+        if problem_id not in self.problem_dict:  # 새로운 문제
+            self.create_problem(input_data)
+        else:  # 기존에 존재하던 문제
+            pre_keyword_id_set = set(keyword.id for keyword in self.problem_dict[problem_id].keyword_standards)
+            new_keyword_id_set = set(keyword.id for keyword in input_data.keyword_standards)
+            if pre_keyword_id_set != new_keyword_id_set:
+                self.problem_dict.pop(problem_id)
+                self.create_problem(input_data)
 
-        for exist_keyword in exist_keywords:
-            if exist_keyword.id in input_keyword_dict:
-                remain_keywords.append(exist_keyword)
-        remain_id_set = set(keyword.id for keyword in remain_keywords)
-
-        for new_keyword in input_data.keyword_standards:
-
-            if new_keyword.id in remain_id_set:
-                continue
-            if "," in new_keyword.content:
-                for content in new_keyword.content.split(","):
-                    remain_keywords.append(KeywordStandard(id=new_keyword.id, content=content.strip()))
-            else:
-                remain_keywords.append(KeywordStandard(id=new_keyword.id, content=new_keyword.content))
-        self.problem_dict[problem_id].keyword_standards = remain_keywords
-        new_embedded_keywords = self.model.encode([keyword.content for keyword in remain_keywords])
-        self.problem_dict[problem_id].embedded_keywords = new_embedded_keywords
-
-    @bentoml.Runnable.method(batchable=False)
-    def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
-        log.info(pformat(input_data.__dict__))
-
-        if input_data.problem_id not in self.problem_dict:  # 새로운 문제
-            keyword_standards = []
-            for keyword_standard in input_data.keyword_standards:
-                if "," in keyword_standard.content:  # 키워드 중복 기준 처리
-                    for content in keyword_standard.content.split(", "):
-                        split_keyword_standard = keyword_standard.copy()
-                        split_keyword_standard.content = content
-                        keyword_standards.append(split_keyword_standard)
-                else:
-                    keyword_standards.append(keyword_standard)
-
-            self.problem_dict[input_data.problem_id] = Problem(
-                keyword_standards=keyword_standards,
-                embedded_keywords=self.model.encode([standard.content for standard in keyword_standards]),
-            )
-        else:  # 기존에 있던 문제라면 validation check
-            self.synchronize_keywords(input_data)
-
-        problem = self.problem_dict[input_data.problem_id]
-        split_answer = input_data.user_answer.strip().split()
+    def get_tokenized_answer(self, user_answer: str):
+        split_answer = user_answer.strip().split()
         tokenized_answer = []
         for concat_size in range(1, self.word_concat_size + 1):
             for split_answer_start_idx in range(len(split_answer) - concat_size + 1):
                 split_answer_end_idx = split_answer_start_idx + concat_size
                 tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
 
+        return tokenized_answer
+
+    @bentoml.Runnable.method(batchable=False)
+    def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
+        log.info(pformat(input_data.__dict__))
+        self.synchronize_keywords(input_data)
+
+        problem = self.problem_dict[input_data.problem_id]
+        tokenized_answer = self.get_tokenized_answer(input_data.user_answer)
         tokenized_answer_embedding = self.model.encode(tokenized_answer)
         similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
+
         predicts = []
         keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
         for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
