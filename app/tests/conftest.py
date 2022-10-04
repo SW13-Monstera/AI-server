@@ -23,7 +23,7 @@ def content_model() -> PromptForClassification:
 
 @pytest.fixture(scope="session")
 def user_answer_df(
-    path: str = "/Users/minjaewon/workspace/AI-server/app/static/changed_user_answer.csv",
+    path: str = "app/static/changed_user_answer.csv",
 ) -> pd.DataFrame:
     return pd.read_csv(path)
 
