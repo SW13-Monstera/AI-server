@@ -1,9 +1,11 @@
 import logging
+import re
 from pprint import pformat
-from typing import Optional
+from typing import List, Optional
 
 import bentoml
 import torch.cuda
+from konlpy.tag import Mecab
 from openprompt import PromptDataLoader
 from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
@@ -20,6 +22,7 @@ from app.schemas import (
     KeywordStandard,
     Problem,
 )
+from app.utils.utils import get_stopwords
 
 log = logging.getLogger("__main__")
 
@@ -34,6 +37,8 @@ class KeywordPredictRunnable(bentoml.Runnable):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         log.info(f"keyword predict model is running on {self.device}")
         self.model = get_keyword_grading_model().to(self.device)
+        self.tokenizer = Mecab()
+        self.stopwords = get_stopwords()
 
     def create_problem(self, input_data: KeywordGradingRequest) -> None:
         log.info(f"problem id [{input_data.problem_id}] : create problem")
@@ -58,15 +63,18 @@ class KeywordPredictRunnable(bentoml.Runnable):
                 self.problem_dict.pop(problem_id)
                 self.create_problem(input_data)
 
-    def get_tokenized_answer(self, user_answer: str):
-        split_answer = user_answer.strip().split()
-        tokenized_answer = []
+    def get_tokenized_answer(self, user_answer: str) -> List[str]:
+        user_answer = re.sub(r"[^\uAC00-\uD7A3a-zA-Z\s]", "", user_answer)  # 한글, 숫자만 남기고 전부 제거
+        tokenized_answers = tuple(
+            word for word, _ in self.tokenizer.pos(user_answer) if word not in self.stopwords and len(word) > 1
+        )
+        tokenized_words = []
         for concat_size in range(1, self.word_concat_size + 1):
-            for split_answer_start_idx in range(len(split_answer) - concat_size + 1):
+            for split_answer_start_idx in range(len(tokenized_answers) - concat_size + 1):
                 split_answer_end_idx = split_answer_start_idx + concat_size
-                tokenized_answer.append(" ".join(split_answer[split_answer_start_idx:split_answer_end_idx]))
-
-        return tokenized_answer
+                tokenized_words.append(" ".join(tokenized_answers[split_answer_start_idx:split_answer_end_idx]))
+        log.info(tokenized_words)
+        return tokenized_words
 
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
@@ -88,8 +96,10 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
         for keyword_id, (embedded_keyword_token_idx, score, content) in keyword_score_dict.items():
             if score > self.threshold:
-                start_idx = input_data.user_answer.find(tokenized_answer[embedded_keyword_token_idx])
-                end_idx = start_idx + len(tokenized_answer[embedded_keyword_token_idx])
+                split_word = tokenized_answer[embedded_keyword_token_idx].split()
+                first_word, last_word = split_word[0], split_word[-1]
+                start_idx = input_data.user_answer.find(first_word)
+                end_idx = input_data.user_answer.find(last_word) + len(last_word)
                 predicts.append(
                     KeywordResponse(
                         id=keyword_id,
