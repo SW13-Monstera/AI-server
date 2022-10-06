@@ -64,7 +64,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
                 self.create_problem(input_data)
 
     def get_tokenized_answer(self, user_answer: str) -> List[str]:
-        user_answer = re.sub(r"[^\uAC00-\uD7A3a-zA-Z\s]", "", user_answer)  # 한글, 숫자만 남기고 전부 제거
+        user_answer = re.sub(r"[^\uAC00-\uD7A3a-zA-Z\s]", "", user_answer)
         tokenized_answers = tuple(
             word for word, _ in self.tokenizer.pos(user_answer) if word not in self.stopwords and len(word) > 1
         )
