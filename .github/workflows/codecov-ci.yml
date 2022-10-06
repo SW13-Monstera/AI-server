@@ -30,8 +30,10 @@ jobs:
 
         - name: install mecab
           run: |
-            sudo apt-get install openjdk-8-jdk python-dev python3-dev
-            sudo pip3 install konlpy jpype1-py3
+            sudo apt-get install g++ openjdk-8-jdk python3-dev python3-pip curl
+            python3 -m pip install --upgrade pip
+            python3 -m pip install konlpy
+            sudo apt-get install curl git
             bash <(curl -s https://raw.githubusercontent.com/konlpy/konlpy/master/scripts/mecab.sh)
 
         - name: save pytorch model and build bento
