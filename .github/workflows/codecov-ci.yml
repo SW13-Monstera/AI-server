@@ -22,11 +22,19 @@ jobs:
           with:
               auto-update-conda: true
               python-version: '3.8.13'
-        
+
         - name: install requirements
           run: |
             conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.3 -c pytorch
             pip3 install -r requirements.txt
+
+        - name: install mecab
+          run: |
+            sudo apt-get install g++ openjdk-8-jdk python3-dev python3-pip curl
+            python3 -m pip install --upgrade pip
+            python3 -m pip install konlpy
+            sudo apt-get install curl git
+            bash <(curl -s https://raw.githubusercontent.com/konlpy/konlpy/master/scripts/mecab.sh)
 
         - name: save pytorch model and build bento
           run: |
