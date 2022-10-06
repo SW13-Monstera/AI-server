@@ -23,8 +23,14 @@ from app.schemas import (
     Problem,
 )
 from app.utils.utils import get_stopwords
+from app.config import OS, MECAB_DIC_PATH
 
 log = logging.getLogger("__main__")
+
+
+if OS == "Windows":
+    import win32file
+    win32file._setmaxstdio(2048)
 
 
 class KeywordPredictRunnable(bentoml.Runnable):
@@ -37,7 +43,7 @@ class KeywordPredictRunnable(bentoml.Runnable):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         log.info(f"keyword predict model is running on {self.device}")
         self.model = get_keyword_grading_model().to(self.device)
-        self.tokenizer = Mecab()
+        self.tokenizer = Mecab(MECAB_DIC_PATH) if OS == "Windows" else Mecab()
         self.stopwords = get_stopwords()
 
     def create_problem(self, input_data: KeywordGradingRequest) -> None:
