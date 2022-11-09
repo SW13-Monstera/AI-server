@@ -2,6 +2,7 @@ import logging
 import os
 import typing
 from typing import Literal
+import platform
 
 import boto3
 import pyrootutils
@@ -50,3 +51,5 @@ CONTENT_BENTO_MODEL_PATH = f"{STAGE}_content_model"
 KEYWORD_MODEL_S3_PATH = os.getenv("KEYWORD_MODEL_S3_PATH")
 CONTENT_MODEL_S3_PATH = os.getenv("CONTENT_MODEL_S3_PATH")
 STOPWORD_FILE_PATH = os.path.join(root, "app/static/stopwords.txt")
+OS = platform.system()
+MECAB_DIC_PATH = "C:\mecab/mecab-ko-dic"
