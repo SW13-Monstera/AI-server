@@ -11,6 +11,7 @@ from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.config import MECAB_DIC_PATH, OS
 from app.model import get_content_grading_model, get_keyword_grading_model
 from app.schemas import (
     ContentGradingRequest,
@@ -23,13 +24,13 @@ from app.schemas import (
     Problem,
 )
 from app.utils.utils import get_stopwords
-from app.config import OS, MECAB_DIC_PATH
 
 log = logging.getLogger("__main__")
 
 
 if OS == "Windows":
     import win32file
+
     win32file._setmaxstdio(2048)
 
 
@@ -90,31 +91,32 @@ class KeywordPredictRunnable(bentoml.Runnable):
 
         problem = self.problem_dict[input_data.problem_id]
         tokenized_answer = self.get_tokenized_answer(input_data.user_answer)
-        tokenized_answer_embedding = self.model.encode(tokenized_answer)
-        similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
-
         predicts = []
-        keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
-        for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
-            target_keyword_id = problem.keyword_standards[keyword_idx].id
-            score = similarity_scores[keyword_idx][embedded_keyword_token_idx]
-            if self.threshold < score and keyword_score_dict[target_keyword_id][1] < score:
-                keyword_score_dict[target_keyword_id][:2] = embedded_keyword_token_idx, score
+        if tokenized_answer:
+            tokenized_answer_embedding = self.model.encode(tokenized_answer)
+            similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
+            keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
 
-        for keyword_id, (embedded_keyword_token_idx, score, content) in keyword_score_dict.items():
-            if score > self.threshold:
-                split_word = tokenized_answer[embedded_keyword_token_idx].split()
-                first_word, last_word = split_word[0], split_word[-1]
-                start_idx = input_data.user_answer.find(first_word)
-                end_idx = input_data.user_answer.find(last_word) + len(last_word)
-                predicts.append(
-                    KeywordResponse(
-                        id=keyword_id,
-                        keyword=content,
-                        predict_keyword_position=[start_idx, end_idx],
-                        predict_keyword=input_data.user_answer[start_idx:end_idx],
+            for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
+                target_keyword_id = problem.keyword_standards[keyword_idx].id
+                score = similarity_scores[keyword_idx][embedded_keyword_token_idx]
+                if self.threshold < score and keyword_score_dict[target_keyword_id][1] < score:
+                    keyword_score_dict[target_keyword_id][:2] = embedded_keyword_token_idx, score
+
+            for keyword_id, (embedded_keyword_token_idx, score, content) in keyword_score_dict.items():
+                if score > self.threshold:
+                    split_word = tokenized_answer[embedded_keyword_token_idx].split()
+                    first_word, last_word = split_word[0], split_word[-1]
+                    start_idx = input_data.user_answer.find(first_word)
+                    end_idx = input_data.user_answer.find(last_word) + len(last_word)
+                    predicts.append(
+                        KeywordResponse(
+                            id=keyword_id,
+                            keyword=content,
+                            predict_keyword_position=[start_idx, end_idx],
+                            predict_keyword=input_data.user_answer[start_idx:end_idx],
+                        )
                     )
-                )
         response_data = KeywordGradingResponse(problem_id=input_data.problem_id, correct_keywords=predicts)
         log.info(pformat(response_data.__dict__))
         return response_data
