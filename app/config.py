@@ -5,6 +5,7 @@ from typing import Literal
 import platform
 
 import boto3
+import pyrootutils
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,12 @@ session = boto3.Session()
 secret_manager = session.client(service_name="secretsmanager", region_name="ap-northeast-2")
 log = logging.getLogger("__main__")
 log.setLevel(logging.INFO)
+root = pyrootutils.setup_root(
+    search_from=__file__,
+    indicator=[".git"],
+    pythonpath=True,
+    dotenv=True,
+)
 
 
 def get_secret():
@@ -43,6 +50,6 @@ KEYWORD_BENTO_MODEL_PATH = f"{STAGE}_keyword_model"
 CONTENT_BENTO_MODEL_PATH = f"{STAGE}_content_model"
 KEYWORD_MODEL_S3_PATH = os.getenv("KEYWORD_MODEL_S3_PATH")
 CONTENT_MODEL_S3_PATH = os.getenv("CONTENT_MODEL_S3_PATH")
-STOPWORD_FILE_PATH = "app/static/stopwords.txt"
+STOPWORD_FILE_PATH = os.path.join(root, "app/static/stopwords.txt")
 OS = platform.system()
 MECAB_DIC_PATH = "C:\mecab/mecab-ko-dic"

@@ -1,0 +1,15 @@
+ignore:
+  - app/tests/*
+
+coverage:
+  status:
+    project:
+      default:
+        # basic
+        target: auto
+        threshold: 70%
+        base: auto
+        flags:
+          - unit
+        paths:
+          - "app"

@@ -16,3 +16,5 @@ python:
     - pandas
     - pydantic
     - openprompt
+    - pyrootutils
+    - ray
