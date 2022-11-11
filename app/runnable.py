@@ -1,11 +1,12 @@
 import logging
 import re
 from pprint import pformat
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import bentoml
 import torch.cuda
 from konlpy.tag import Mecab
+from numpy.typing import NDArray
 from openprompt import PromptDataLoader
 from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
@@ -20,6 +21,7 @@ from app.schemas import (
     KeywordGradingRequest,
     KeywordGradingResponse,
     KeywordResponse,
+    KeywordSimilarityInfo,
     KeywordStandard,
     Problem,
 )
@@ -36,7 +38,7 @@ if OS == "Windows":
 
 class KeywordPredictRunnable(bentoml.Runnable):
     SUPPORTS_CPU_MULTI_THREADING = True
-    threshold = 0.5
+    threshold = 0.7
     word_concat_size = 2
 
     def __init__(self, problem_dict: Optional[dict] = None):
@@ -84,6 +86,39 @@ class KeywordPredictRunnable(bentoml.Runnable):
         log.info(tokenized_words)
         return tokenized_words
 
+    def calculate_keyword_score(
+        self,
+        keyword_standards: List[KeywordStandard],
+        split_keyword_standards: List[KeywordStandard],
+        similarity_scores: NDArray,
+    ) -> Tuple[KeywordSimilarityInfo]:
+        keyword_similarity_info_dict = {
+            standard.id: KeywordSimilarityInfo(
+                id=standard.id, content=standard.content, score=0, tokenized_answer_idx=-1
+            )
+            for standard in keyword_standards
+        }
+
+        for keyword_idx, tokenized_answer_idx in enumerate(similarity_scores.argmax(axis=1)):
+            target_keyword_id = split_keyword_standards[keyword_idx].id
+            score = similarity_scores[keyword_idx][tokenized_answer_idx]
+            keyword_similarity_info = keyword_similarity_info_dict[target_keyword_id]
+            if self.threshold < score and keyword_similarity_info.score < score:
+                keyword_similarity_info.tokenized_answer_idx = tokenized_answer_idx
+                keyword_similarity_info.score = score
+
+        return tuple(keyword_similarity_info_dict.values())
+
+    @staticmethod
+    def get_predicted_keyword_position(
+        tokenized_answer: List[str], embedded_keyword_token_idx: int, user_answer: str
+    ) -> Tuple[int, int]:
+        split_word = tokenized_answer[embedded_keyword_token_idx].split()
+        first_word, last_word = split_word[0], split_word[-1]
+        start_idx = user_answer.find(first_word)
+        end_idx = user_answer.find(last_word) + len(last_word)
+        return start_idx, end_idx
+
     @bentoml.Runnable.method(batchable=False)
     def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         log.info(pformat(input_data.__dict__))
@@ -95,24 +130,20 @@ class KeywordPredictRunnable(bentoml.Runnable):
         if tokenized_answer:
             tokenized_answer_embedding = self.model.encode(tokenized_answer)
             similarity_scores = cosine_similarity(problem.embedded_keywords, tokenized_answer_embedding)
-            keyword_score_dict = {standard.id: [None, 0, standard.content] for standard in input_data.keyword_standards}
-
-            for keyword_idx, embedded_keyword_token_idx in enumerate(similarity_scores.argmax(axis=1)):
-                target_keyword_id = problem.keyword_standards[keyword_idx].id
-                score = similarity_scores[keyword_idx][embedded_keyword_token_idx]
-                if self.threshold < score and keyword_score_dict[target_keyword_id][1] < score:
-                    keyword_score_dict[target_keyword_id][:2] = embedded_keyword_token_idx, score
-
-            for keyword_id, (embedded_keyword_token_idx, score, content) in keyword_score_dict.items():
-                if score > self.threshold:
-                    split_word = tokenized_answer[embedded_keyword_token_idx].split()
-                    first_word, last_word = split_word[0], split_word[-1]
-                    start_idx = input_data.user_answer.find(first_word)
-                    end_idx = input_data.user_answer.find(last_word) + len(last_word)
+            keyword_similarity_infos = self.calculate_keyword_score(
+                keyword_standards=input_data.keyword_standards,
+                split_keyword_standards=problem.keyword_standards,
+                similarity_scores=similarity_scores,
+            )
+            for keyword_similarity_info in keyword_similarity_infos:
+                if keyword_similarity_info.score >= self.threshold:
+                    start_idx, end_idx = self.get_predicted_keyword_position(
+                        tokenized_answer, keyword_similarity_info.tokenized_answer_idx, input_data.user_answer
+                    )
                     predicts.append(
                         KeywordResponse(
-                            id=keyword_id,
-                            keyword=content,
+                            id=keyword_similarity_info.id,
+                            keyword=keyword_similarity_info.content,
                             predict_keyword_position=[start_idx, end_idx],
                             predict_keyword=input_data.user_answer[start_idx:end_idx],
                         )
