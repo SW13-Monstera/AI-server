@@ -83,6 +83,11 @@ class KeywordGradingRequest(UserAnswer):
         return value
 
 
+class KeywordSimilarityInfo(KeywordStandard):
+    score: float = Field(title="유사도 점수", description="점수는 0에서 1사이의 값")
+    tokenized_answer_idx: int = Field(title="토크나이징된 유저 답변의 인덱스")
+
+
 class ContentGradingRequest(UserAnswer):
     content_standards: List[ContentStandard] = Field(title="내용 채점 기준 리스트")
 

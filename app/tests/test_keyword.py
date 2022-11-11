@@ -2,6 +2,7 @@ import random
 
 from app.schemas import KeywordGradingRequest, KeywordStandard
 from app.service import KeywordPredictRunnable
+from app.tests.factory import KeywordDataFactory
 
 
 def test_keyword_predict_runnable(
@@ -114,3 +115,18 @@ def test_keyword_predict_runnable_4(
                 success = True
 
         assert success, "runnable 내부의 problem_dict에 동기화가 되지 않았습니다."
+
+
+def test_empty_tokenized_answer_test(
+    keyword_runnable: KeywordPredictRunnable, keyword_data_factory: KeywordDataFactory
+):
+    """
+    tokenizing 했을 때 비어 있는 list 라면 predict 없이 바로 return
+    """
+    bad_input = "ㅁㄴㅇ레ㅐㅓㅁㄴㅇ레"
+    tokenized_answer = keyword_runnable.get_tokenized_answer(bad_input)
+    assert tokenized_answer == []
+    request_data = keyword_data_factory.get_request_data()
+    request_data.user_answer = bad_input
+    response_data = keyword_runnable.is_correct_keyword(request_data)
+    assert response_data.correct_keywords == []
