@@ -14,3 +14,4 @@ mecab-python3==1.0.5
 JPype1==1.4.0
 ray==2.0.1
 pyrootutils==1.0.4
+locust==2.13.0
