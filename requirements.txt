@@ -15,3 +15,7 @@ JPype1==1.4.0
 ray==2.0.1
 pyrootutils==1.0.4
 locust==2.13.0
+
+
+### new
+fastapi==0.87.0
