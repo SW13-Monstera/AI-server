@@ -8,10 +8,10 @@ from app.controller.content import ContentController
 from app.controller.keyeword import KeywordController
 from app.schemas import ContentGradingRequest, IntegratedGradingResponse, KeywordGradingRequest, KeywordGradingResponse
 
-router = APIRouter(prefix="/predict", tags=["grading"])
+router = APIRouter(tags=["grading"])
 
 
-@router.post("/keyword")
+@router.post("/keyword_predict", status_code=200, response_model=KeywordGradingResponse)
 async def keyword_predict(
     keyword_grading_req: KeywordGradingRequest = Body(...),
     keyword_controller: KeywordController = Depends(get_keyword_controller),
@@ -19,7 +19,7 @@ async def keyword_predict(
     return await keyword_controller.grading(keyword_grading_req)
 
 
-@router.post("/integrate")
+@router.post("/integrate_predict", status_code=200, response_model=IntegratedGradingResponse)
 async def integrate_predict(
     integrated_grading_req: schemas.IntegratedGradingRequest = Body(...),
     keyword_controller: KeywordController = Depends(get_keyword_controller),

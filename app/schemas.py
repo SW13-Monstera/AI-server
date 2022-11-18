@@ -5,6 +5,12 @@ from pydantic import BaseModel, Field, validator
 
 from app.enums import GradingStandardEnum
 from app.exceptions import APIException, APIExceptionErrorCodes, APIExceptionTypes
+from app.utils.utils import (
+    get_integrated_grading_request_example,
+    get_integrated_grading_response_example,
+    get_keyword_grading_request_example,
+    get_keyword_grading_response_example,
+)
 
 
 class GradingStandard(BaseModel):
@@ -82,6 +88,9 @@ class KeywordGradingRequest(UserAnswer):
             )
         return value
 
+    class Config:
+        schema_extra = {"example": get_keyword_grading_request_example()}
+
 
 class KeywordSimilarityInfo(KeywordStandard):
     score: float = Field(title="유사도 점수", description="점수는 0에서 1사이의 값")
@@ -114,6 +123,9 @@ class KeywordGradingResponse(BaseModel):
     problem_id: int = Field(title="문제 아이디")
     correct_keywords: List[KeywordResponse] = Field(title="예상 키워드 리스트")
 
+    class Config:
+        schema_extra = {"example": get_keyword_grading_response_example()}
+
 
 class ContentResponse(BaseModel):
     id: int = Field(title="내용 채점 기준 아이디")
@@ -126,8 +138,10 @@ class ContentGradingResponse(BaseModel):
 
 
 class IntegratedGradingRequest(KeywordGradingRequest, ContentGradingRequest):
-    ...
+    class Config:
+        schema_extra = {"example": get_integrated_grading_request_example()}
 
 
 class IntegratedGradingResponse(KeywordGradingResponse, ContentGradingResponse):
-    ...
+    class Config:
+        schema_extra = {"example": get_integrated_grading_response_example()}
