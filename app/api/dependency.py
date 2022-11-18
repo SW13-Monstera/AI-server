@@ -79,6 +79,3 @@ def get_content_controller(model: PromptForClassification = Depends(get_content_
     if content_controller is None:
         content_controller = ContentController(model)
     return content_controller
-
-
-init_model()
