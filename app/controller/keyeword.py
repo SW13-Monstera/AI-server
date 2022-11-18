@@ -10,6 +10,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.config import MECAB_DIC_PATH, OS
+from app.controller.base import BaseController
 from app.schemas import (
     KeywordGradingRequest,
     KeywordGradingResponse,
@@ -23,7 +24,7 @@ from app.utils.utils import get_stopwords
 log = logging.getLogger("__main__")
 
 
-class KeywordController:
+class KeywordController(BaseController):
     def __init__(self, model: SentenceTransformer, problem_dict: Optional[dict] = None):
         self.problem_dict = problem_dict if problem_dict else {}
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -104,7 +105,7 @@ class KeywordController:
         end_idx = user_answer.find(last_word) + len(last_word)
         return start_idx, end_idx
 
-    async def is_correct_keyword(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
+    async def grading(self, input_data: KeywordGradingRequest) -> KeywordGradingResponse:
         log.info(pformat(input_data.__dict__))
         self.synchronize_keywords(input_data)
 

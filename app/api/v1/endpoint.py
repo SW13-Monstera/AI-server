@@ -16,7 +16,7 @@ async def keyword_predict(
     keyword_grading_req: KeywordGradingRequest = Body(...),
     keyword_controller: KeywordController = Depends(get_keyword_controller),
 ) -> KeywordGradingResponse:
-    return await keyword_controller.is_correct_keyword(keyword_grading_req)
+    return await keyword_controller.grading(keyword_grading_req)
 
 
 @router.post("/integrate")
@@ -37,11 +37,9 @@ async def integrate_predict(
     )
 
     keyword_grading_result, content_grading_result = await asyncio.gather(
-        keyword_controller.is_correct_keyword(keyword_predict_input),
-        content_controller.is_correct_content(content_predict_input),
+        keyword_controller.grading(keyword_predict_input),
+        content_controller.grading(content_predict_input),
     )
-    # keyword_grading_result = keyword_controller.is_correct_keyword(keyword_predict_input)
-    # content_grading_result = content_controller.is_correct_content(content_predict_input)
     return IntegratedGradingResponse(
         problem_id=keyword_grading_result.problem_id,
         correct_keywords=keyword_grading_result.correct_keywords,

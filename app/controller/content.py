@@ -6,12 +6,13 @@ from openprompt import PromptDataLoader, PromptForClassification
 from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
 
+from app.controller.base import BaseController
 from app.schemas import ContentGradingRequest, ContentGradingResponse, ContentResponse
 
 log = logging.getLogger("__main__")
 
 
-class ContentController:
+class ContentController(BaseController):
     def __init__(self, model: PromptForClassification):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         log.info(f"content predict model is running on : {self.device}")
@@ -28,7 +29,7 @@ class ContentController:
     def is_correct(predict) -> bool:
         return predict == 1
 
-    async def is_correct_content(self, input_data: ContentGradingRequest) -> ContentGradingResponse:
+    async def grading(self, input_data: ContentGradingRequest) -> ContentGradingResponse:
         log.info(pformat(input_data.__dict__))
         user_answer = input_data.user_answer.strip()
         input_data_list = [
