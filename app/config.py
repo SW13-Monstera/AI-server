@@ -55,3 +55,4 @@ OS = platform.system()
 MECAB_DIC_PATH = "C:\mecab/mecab-ko-dic"  # noqa
 PROJECT_NAME = "csbroker-ai"
 API_V1_STR: str = "/api/v1"
+TEST_AI_SERVER_HOST: str = os.getenv("TEST_AI_SERVER_HOST")

@@ -1,5 +1,7 @@
 from locust import HttpUser, TaskSet, between, task
 
+from app.config import TEST_AI_SERVER_HOST
+
 
 class UserAction(TaskSet):
     @task
@@ -24,6 +26,6 @@ class UserAction(TaskSet):
 
 
 class WebsiteUser(HttpUser):
-    host = "http://csbroker.ddns.net:2222"
+    host = TEST_AI_SERVER_HOST
     tasks = [UserAction]
     wait_time = between(1, 4)
