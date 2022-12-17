@@ -3,10 +3,21 @@ import pytest
 from openprompt import PromptForClassification
 from sentence_transformers import SentenceTransformer
 
-from app.model import get_content_grading_model, get_keyword_grading_model
-from app.runnable import KeywordPredictRunnable
+from app.api.dependency import (
+    get_content_controller,
+    get_content_grading_model,
+    get_keyword_controller,
+    get_keyword_grading_model,
+)
+from app.controller.content import ContentController
+from app.controller.keyeword import KeywordController
 from app.schemas import ContentGradingRequest, KeywordGradingRequest
 from app.tests.factory import ContentDataFactory, KeywordDataFactory
+
+
+@pytest.fixture(scope="session")
+def user_answer_df(path: str = "app/static/changed_user_answer.csv") -> pd.DataFrame:
+    return pd.read_csv(path)
 
 
 @pytest.fixture(scope="session")
@@ -20,15 +31,13 @@ def content_model() -> PromptForClassification:
 
 
 @pytest.fixture(scope="session")
-def user_answer_df(
-    path: str = "app/static/changed_user_answer.csv",
-) -> pd.DataFrame:
-    return pd.read_csv(path)
+def keyword_controller(keyword_model: SentenceTransformer) -> KeywordController:
+    return get_keyword_controller(keyword_model)
 
 
 @pytest.fixture(scope="session")
-def keyword_runnable() -> KeywordPredictRunnable:
-    return KeywordPredictRunnable()
+def content_controller(content_model: PromptForClassification) -> ContentController:
+    return get_content_controller(content_model)
 
 
 @pytest.fixture(scope="session")
