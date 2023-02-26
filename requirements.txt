@@ -10,12 +10,9 @@ openprompt==1.0.1
 boto3==1.24.77
 nltk==3.7
 konlpy==0.6.0
-mecab-python3==1.0.5
 JPype1==1.4.0
-ray==2.0.1
 pyrootutils==1.0.4
 locust==2.13.0
-
 
 ### new
 fastapi==0.87.0
