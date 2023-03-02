@@ -10,7 +10,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 session = boto3.Session()
-secret_manager = session.client(service_name="secretsmanager", region_name="ap-northeast-2")
+aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+secret_manager = session.client(
+    service_name="secretsmanager",
+    region_name="ap-northeast-2",
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key
+)
+
 log = logging.getLogger("__main__")
 log.setLevel(logging.INFO)
 root = pyrootutils.setup_root(
@@ -22,7 +30,7 @@ root = pyrootutils.setup_root(
 
 
 def get_secret():
-    secret_name = f"{STAGE}/cs-broker/ai-server"
+    secret_name = "csbroker"
 
     try:
         get_secret_value_response = secret_manager.get_secret_value(SecretId=secret_name)
