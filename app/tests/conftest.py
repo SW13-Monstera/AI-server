@@ -3,12 +3,7 @@ import pytest
 from openprompt import PromptForClassification
 from sentence_transformers import SentenceTransformer
 
-from app.api.dependency import (
-    get_content_controller,
-    get_content_grading_model,
-    get_keyword_controller,
-    get_keyword_grading_model,
-)
+from app.api.dependency import ApplicationContext
 from app.controller.content import ContentController
 from app.controller.keyeword import KeywordController
 from app.schemas import ContentGradingRequest, KeywordGradingRequest
@@ -21,23 +16,27 @@ def user_answer_df(path: str = "app/static/changed_user_answer.csv") -> pd.DataF
 
 
 @pytest.fixture(scope="session")
-def keyword_model() -> SentenceTransformer:
-    return get_keyword_grading_model()
+def context() -> ApplicationContext:
+    return ApplicationContext()
+
+@pytest.fixture(scope="session")
+def keyword_model(context: ApplicationContext) -> SentenceTransformer:
+    return context.get_keyword_model()
 
 
 @pytest.fixture(scope="session")
-def content_model() -> PromptForClassification:
-    return get_content_grading_model()
+def content_model(context: ApplicationContext) -> PromptForClassification:
+    return context.get_content_model()
 
 
 @pytest.fixture(scope="session")
-def keyword_controller(keyword_model: SentenceTransformer) -> KeywordController:
-    return get_keyword_controller(keyword_model)
+def keyword_controller(context: ApplicationContext) -> KeywordController:
+    return context.get_keyword_controller()
 
 
 @pytest.fixture(scope="session")
-def content_controller(content_model: PromptForClassification) -> ContentController:
-    return get_content_controller(content_model)
+def content_controller(context: ApplicationContext) -> ContentController:
+    return context.get_content_controller()
 
 
 @pytest.fixture(scope="session")

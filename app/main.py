@@ -4,7 +4,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app import config as settings
-from app.api.dependency import init_model
+from app.api.dependency import load_application_context
 from app.api.v1.endpoint import router
 from app.exceptions import APIException, APIExceptionErrorCodes, APIExceptionTypes
 
@@ -14,7 +14,7 @@ app.include_router(router)
 
 @app.on_event("startup")
 async def startup_event():
-    init_model()
+    load_application_context()
 
 
 @app.exception_handler(RequestValidationError)
