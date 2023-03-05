@@ -7,11 +7,13 @@ from openprompt.data_utils import InputExample
 from openprompt.plms import T5TokenizerWrapper
 
 from app.controller.base import BaseController
+from app.decorator import singleton
 from app.schemas import ContentGradingRequest, ContentGradingResponse, ContentResponse
 
 log = logging.getLogger("__main__")
 
 
+@singleton
 class ContentController(BaseController):
     def __init__(self, model: PromptForClassification):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,17 +39,7 @@ class ContentController(BaseController):
             for content_standard in input_data.content_standards
         ]
 
-        data_loader = PromptDataLoader(
-            dataset=input_data_list,
-            template=self.template,
-            tokenizer=self.model.tokenizer,
-            tokenizer_wrapper_class=T5TokenizerWrapper,
-            max_seq_length=256,
-            decoder_max_length=3,
-            predict_eos_token=False,
-            truncate_method="head",
-            batch_size=len(input_data_list),
-        )
+        data_loader = await self.transform_loader(input_data_list)
         correct_contents = []
         with torch.no_grad():
             for model_inputs in data_loader:
@@ -65,3 +57,16 @@ class ContentController(BaseController):
         response_data = ContentGradingResponse(problem_id=input_data.problem_id, correct_contents=correct_contents)
         log.info(pformat(response_data.__dict__))
         return response_data
+
+    async def transform_loader(self, input_data_list):
+        return PromptDataLoader(
+            dataset=input_data_list,
+            template=self.template,
+            tokenizer=self.model.tokenizer,
+            tokenizer_wrapper_class=T5TokenizerWrapper,
+            max_seq_length=256,
+            decoder_max_length=3,
+            predict_eos_token=False,
+            truncate_method="head",
+            batch_size=len(input_data_list),
+        )
