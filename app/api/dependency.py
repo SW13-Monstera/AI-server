@@ -20,12 +20,14 @@ from app.config import (
 )
 from app.controller.content import ContentController
 from app.controller.keyeword import KeywordController
+from app.decorator import singleton
 from app.utils.aws_s3 import AwsS3Downloader
 from app.utils.utils import get_template_text
 
 log = logging.getLogger("__main__")
 
 
+@singleton
 class ApplicationContext:
     _s3: AwsS3Downloader
     _device: Device
