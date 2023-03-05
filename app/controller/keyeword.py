@@ -4,13 +4,13 @@ from pprint import pformat
 from typing import List, Optional, Tuple
 
 import torch.cuda
-from konlpy.tag import Mecab
+from konlpy.tag import Kkma
 from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.config import MECAB_DIC_PATH, OS
 from app.controller.base import BaseController
+from app.decorator import singleton
 from app.schemas import (
     KeywordGradingRequest,
     KeywordGradingResponse,
@@ -24,23 +24,21 @@ from app.utils.utils import get_stopwords
 log = logging.getLogger("__main__")
 
 
+@singleton
 class KeywordController(BaseController):
     def __init__(self, model: SentenceTransformer, problem_dict: Optional[dict] = None):
         self.problem_dict = problem_dict if problem_dict else {}
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         log.info(f"keyword predict model is running on {self.device}")
         self.model = model.to(self.device)
-        self.tokenizer = Mecab(MECAB_DIC_PATH) if OS == "Windows" else Mecab()
+        self.tokenizer = Kkma()
         self.stopwords = get_stopwords()
         self.threshold = 0.7
         self.word_concat_size = 2
 
     def create_problem(self, input_data: KeywordGradingRequest) -> None:
         log.info(f"problem id [{input_data.problem_id}] : create problem")
-        keyword_standards = []
-        for keyword_standard in input_data.keyword_standards:
-            for content in keyword_standard.content.split(", "):
-                keyword_standards.append(KeywordStandard(id=keyword_standard.id, content=content.strip()))
+        keyword_standards: List[KeywordStandard] = input_data.keyword_standards
 
         self.problem_dict[input_data.problem_id] = Problem(
             keyword_standards=keyword_standards,
@@ -49,14 +47,18 @@ class KeywordController(BaseController):
 
     def synchronize_keywords(self, input_data: KeywordGradingRequest) -> None:
         problem_id = input_data.problem_id
-        if problem_id not in self.problem_dict:  # 새로운 문제
+        if self._is_new_problem(problem_id):  # 새로운 문제
             self.create_problem(input_data)
-        else:  # 기존에 존재하던 문제
-            pre_keyword_id_set = set(keyword.id for keyword in self.problem_dict[problem_id].keyword_standards)
-            new_keyword_id_set = set(keyword.id for keyword in input_data.keyword_standards)
-            if pre_keyword_id_set != new_keyword_id_set:
-                self.problem_dict.pop(problem_id)
-                self.create_problem(input_data)
+            return
+
+        pre_keyword_id_set = set(keyword.id for keyword in self.problem_dict[problem_id].keyword_standards)
+        new_keyword_id_set = set(keyword.id for keyword in input_data.keyword_standards)
+        if pre_keyword_id_set != new_keyword_id_set:
+            self.problem_dict.pop(problem_id)
+            self.create_problem(input_data)
+
+    def _is_new_problem(self, problem_id: int):
+        return problem_id not in self.problem_dict
 
     def get_tokenized_answer(self, user_answer: str) -> List[str]:
         regex_filter = r"[^\uAC00-\uD7A3a-zA-Z\s]"
